@@ -8,14 +8,11 @@ import 'widgets/draggable_car.dart'; // tu clase DraggableCar
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env"); // si lo usas para Supabase
+  await dotenv.load(fileName: ".env"); 
 
   runApp(const MyGameApp());
 }
 
-// ----------------------------------------------------------
-// APP PRINCIPAL
-// ----------------------------------------------------------
 class MyGameApp extends StatelessWidget {
   const MyGameApp({super.key});
 
