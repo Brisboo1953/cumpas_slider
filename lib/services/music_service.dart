@@ -6,7 +6,7 @@ class MusicService {
   static Future<void> playMenu() async {
     try {
       await _player.setReleaseMode(ReleaseMode.loop);
-      // Try playing as an asset first (recommended)
+      // Try playing as an asset first (recommended) asi es
       try {
         await _player.play(AssetSource('menu_music.mp3'));
         return;
