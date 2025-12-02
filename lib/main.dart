@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:async';
 
+// Importa la GamePage correcta desde su propio archivo
+import 'game_page.dart'; 
+import 'options_page_ui.dart';
+import 'services/music_service.dart';
 
-import 'widgets/draggable_car.dart'; // tu clase DraggableCar
+// Ya no necesitamos importar DraggableCar aquí, ya que GamePage la importa.
+// import 'widgets/draggable_car.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env"); 
+  // Asegúrate de que dotenv.load se ejecuta antes de runApp si necesitas variables de entorno
+  // await dotenv.load(fileName: ".env"); 
 
   runApp(const MyGameApp());
 }
@@ -29,17 +35,38 @@ class MyGameApp extends StatelessWidget {
 // ----------------------------------------------------------
 // 1) MENÚ PRINCIPAL
 // ----------------------------------------------------------
-class MainMenuPage extends StatelessWidget {
+class MainMenuPage extends StatefulWidget {
   const MainMenuPage({super.key});
+
+  @override
+  State<MainMenuPage> createState() => _MainMenuPageState();
+}
+
+class _MainMenuPageState extends State<MainMenuPage> {
+  bool _isMusicPlaying = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Do not autoplay music — many browsers block autoplay. User can enable via button.
+  }
+
+  @override
+  void dispose() {
+    MusicService.stop();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.blueGrey.shade900,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
+      body: Stack(
+        children: [
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
             Text("CAR GAME",
                 style: TextStyle(
                     fontSize: 40,
@@ -48,7 +75,7 @@ class MainMenuPage extends StatelessWidget {
 
             const SizedBox(height: 60),
 
-            // --- BOTÓN JUGAR ---
+            // --- BOTÓN JUGAR (Ahora usa la GamePage IMPORTADA) ---
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
@@ -71,7 +98,7 @@ class MainMenuPage extends StatelessWidget {
               ),
               onPressed: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const OptionsPage()));
+                    MaterialPageRoute(builder: (_) => const NewOptionsPage()));
               },
               child: const Text("OPCIONES", style: TextStyle(fontSize: 22)),
             ),
@@ -90,11 +117,34 @@ class MainMenuPage extends StatelessWidget {
               child: const Text("SALIR", style: TextStyle(fontSize: 22)),
             ),
           ],
-        ),
+            ),
+          ),
+          // Botón para activar/desactivar música (top-right)
+          Positioned(
+            right: 12,
+            top: 12,
+            child: IconButton(
+              icon: Icon(_isMusicPlaying ? Icons.volume_up : Icons.volume_off, color: Colors.white),
+              onPressed: () async {
+                if (_isMusicPlaying) {
+                  await MusicService.stop();
+                  setState(() {
+                    _isMusicPlaying = false;
+                  });
+                } else {
+                  await MusicService.playMenu();
+                  setState(() {
+                    _isMusicPlaying = true;
+                  });
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
-
+  
   /// VENTANA DE CONFIRMACIÓN PARA SALIR
   void _confirmExit(BuildContext context) {
     showDialog(
@@ -107,128 +157,12 @@ class MainMenuPage extends StatelessWidget {
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text("Cancelar")),
             TextButton(
-                onPressed: () => Navigator.pop(context), // cierra menú → cierra app
+                // Esto solo cierra el diálogo en un entorno normal
+                onPressed: () => Navigator.pop(context), 
                 child: const Text("Salir")),
           ],
         );
       },
-    );
-  }
-}
-
-// ----------------------------------------------------------
-// 2) PANTALLA DEL JUEGO
-// ----------------------------------------------------------
-class GamePage extends StatefulWidget {
-  const GamePage({super.key});
-
-  @override
-  State<GamePage> createState() => _GamePageState();
-}
-
-class _GamePageState extends State<GamePage> {
-  double gasoline = 100;
-  double consumeRate = 0.25;
-  int money = 0;
-  Timer? gameTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    startGasolineTimer();
-  }
-
-  void startGasolineTimer() {
-    gameTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
-      setState(() {
-        gasoline -= consumeRate;
-        if (gasoline <= 0) {
-          gasoline = 0;
-          timer.cancel();
-          _gameOver();
-        }
-      });
-    });
-  }
-
-  void _gameOver() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("¡Se acabó la gasolina!"),
-        content: const Text("El juego ha terminado."),
-        actions: [
-          TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.pop(context);
-              },
-              child: const Text("Volver al menú")),
-        ],
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    gameTimer?.cancel();
-    super.dispose();
-  }
-
-  void collectMoney(int amount) {
-    setState(() => money += amount);
-  }
-
-  void fillGas(int amount) {
-    setState(() {
-      gasoline += amount;
-      if (gasoline > 100) gasoline = 100;
-    });
-  }
-
-  void onScoreChanged(int score) {
-    // score 0–100 viene de tu DraggableCar
-    if (score > 80) {
-      collectMoney(1);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Juego"),
-        backgroundColor: Colors.black,
-      ),
-      backgroundColor: Colors.grey.shade900,
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text("Gasolina: ${gasoline.toStringAsFixed(0)}%",
-              style: const TextStyle(color: Colors.white, fontSize: 22)),
-          Text("Dinero: $money",
-              style: const TextStyle(color: Colors.white, fontSize: 22)),
-
-          const SizedBox(height: 40),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: DraggableCar(
-              imagePath: "assets/cars/orange_car.png",
-              width: 120,
-              height: 80,
-              onScoreChanged: onScoreChanged,
-            ),
-          ),
-
-          const SizedBox(height: 40),
-
-          ElevatedButton(
-            onPressed: () => fillGas(30),
-            child: const Text("Recoger Bidón (+30)"),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -253,3 +187,4 @@ class OptionsPage extends StatelessWidget {
     );
   }
 }
+// NOTA: La clase GamePage ha sido eliminada de aquí y movida a game_page.dart
