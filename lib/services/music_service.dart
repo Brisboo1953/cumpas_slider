@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class MusicService {
@@ -13,7 +14,7 @@ class MusicService {
       } catch (e) {
         // If asset playback fails on web (format/mime issues), try a URL fallback
         // We'll fall through to UrlSource below.
-        print('AudioPlayers: AssetSource failed, trying UrlSource fallback: $e');
+        debugPrint('AudioPlayers: AssetSource failed, trying UrlSource fallback: $e');
       }
 
       // Fallback: try resolving the asset via a URL (useful for web servers)
@@ -22,7 +23,7 @@ class MusicService {
         await _player.play(UrlSource(url));
         return;
       } catch (err) {
-        print('AudioPlayers: UrlSource fallback failed for mp3: $err');
+        debugPrint('AudioPlayers: UrlSource fallback failed for mp3: $err');
       }
 
       // Try an OGG variant if available (some browsers prefer/require different encodings)
@@ -31,7 +32,7 @@ class MusicService {
         await _player.play(UrlSource(urlOgg));
         return;
       } catch (err2) {
-        print('AudioPlayers: UrlSource fallback failed for ogg: $err2');
+        debugPrint('AudioPlayers: UrlSource fallback failed for ogg: $err2');
         rethrow;
       }
     } catch (e) {

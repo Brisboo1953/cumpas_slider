@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 // * IMPORTACIÓN CORREGIDA para la estructura lib/widgets/draggable_car.dart *
 import 'widgets/draggable_car.dart'; 
 import 'services/settings_service.dart';
+import 'services/supabase_service.dart';
 
 // Asegúrate de que estas importaciones de servicios estén disponibles si las usas.
 // Si no tienes estas clases, puedes borrarlas temporalmente para que compile.
@@ -20,7 +21,8 @@ const double _BACKGROUND_HEIGHT = 600.0; // Altura original de la imagen del cam
 // La altura de la imagen debe ser igual a la constante _BACKGROUND_HEIGHT.
 
 class GamePage extends StatefulWidget {
-  const GamePage({super.key});
+  final String? playerName;
+  const GamePage({super.key, this.playerName});
 
   @override
   State<GamePage> createState() => _GamePageState();
@@ -32,8 +34,7 @@ class _GamePageState extends State<GamePage> {
   double carY = 0; 
   double carWidth = 100;
   double carHeight = 60;
-  double maxCarOffsetX = 0; 
-
+  
   // Sizes that adapt to orientation
   double coinSize = _coinSize;
   double pacaSizeLocal = _pacaSize;
@@ -84,23 +85,31 @@ class _GamePageState extends State<GamePage> {
     _startObjects();
     _startMovement();
   }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    const margin = 20.0;
-
-    // Calcula el límite máximo de desplazamiento X del centro de la pantalla
-    maxCarOffsetX = (screenWidth / 2) - (carWidth / 2) - margin;
-  }
   
   // Detiene todos los temporizadores al final del juego
   void _stopGame() {
     moveTimer?.cancel();
     objectTimer?.cancel();
     gasolineTimer?.cancel();
+    moveTimer = null;
+    objectTimer = null;
+    gasolineTimer = null;
+  }
+
+  void _pauseGame() {
+    moveTimer?.cancel();
+    objectTimer?.cancel();
+    gasolineTimer?.cancel();
+    moveTimer = null;
+    objectTimer = null;
+    gasolineTimer = null;
+  }
+
+  void _resumeGame() {
+    // Evita duplicar timers
+    if (moveTimer == null || !(moveTimer?.isActive ?? false)) _startMovement();
+    if (objectTimer == null || !(objectTimer?.isActive ?? false)) _startObjects();
+    if (gasolineTimer == null || !(gasolineTimer?.isActive ?? false)) _startGasoline();
   }
 
   // * Lógica para subir de nivel y aumentar la velocidad *
@@ -114,7 +123,7 @@ class _GamePageState extends State<GamePage> {
         // Esto hace la progresión más lineal y controlable.
         nextLevelScore += 500; 
       });
-      print("LEVEL UP! Level: $currentLevel, Speed: $backgroundSpeed, Next Score: $nextLevelScore");
+      debugPrint("LEVEL UP! Level: $currentLevel, Speed: $backgroundSpeed, Next Score: $nextLevelScore");
     }
   }
 
@@ -131,8 +140,13 @@ class _GamePageState extends State<GamePage> {
         });
         
         // DEBUG: Muestra en consola que Game Over se activó
-        print("GAME OVER TRIGGERED. Score: $score");
+        debugPrint("GAME OVER TRIGGERED. Score: $score");
         
+        // Guarda la puntuación si hay un nombre válido
+        if (widget.playerName != null && widget.playerName!.trim().isNotEmpty) {
+          SupabaseService().insertScore(name: widget.playerName!.trim(), score: score);
+        }
+
         return;
       }
       setState(() => gasoline -= 0.5);
@@ -254,8 +268,12 @@ class _GamePageState extends State<GamePage> {
 
       return Rect.fromLTWH(left, top, carWidth, carHeight);
     } else {
-      // Horizontal: el carro se mueve en el eje Y, centrado horizontalmente
-      final left = (screenW - carWidth) / 2;
+          // Horizontal: el carro se mueve en el eje Y and is rendered inside a
+          // left-aligned area with a left padding of 20 and a SizedBox width of
+          // `screenW * 0.5`. Compute the left coordinate so the collision rect
+          // matches the visual position of the widget.
+          const double horizontalLeftPadding = 20.0;
+          final left = horizontalLeftPadding;
       final top = (screenH / 2) + carY - (carHeight / 2);
       return Rect.fromLTWH(left, top, carWidth, carHeight);
     }
@@ -263,14 +281,17 @@ class _GamePageState extends State<GamePage> {
 
   void _checkCollision() {
     final car = _carRect();
+    // Reduce hitbox slightly so collisions happen a bit later (less false/early hits)
+    const double collisionPadding = 8.0;
+    final carHit = car.deflate(collisionPadding);
     bool scoreChanged = false;
 
     // Colisión con Monedas
     coins.removeWhere((c) {
-      final r = Rect.fromLTWH(c.dx, c.dy, coinSize, coinSize);
-      if (car.overlaps(r)) {
+      final r = Rect.fromLTWH(c.dx, c.dy, coinSize, coinSize).deflate(4.0);
+      if (carHit.overlaps(r)) {
+        // Monedas incrementan solo la puntuación
         score += 10;
-        gasoline = min(100, gasoline + 5);
         scoreChanged = true;
         return true;
       }
@@ -279,11 +300,10 @@ class _GamePageState extends State<GamePage> {
 
     // Colisión con Pacas
     pacas.removeWhere((p) {
-      final r = Rect.fromLTWH(p.dx, p.dy, pacaSizeLocal, pacaSizeLocal);
-      if (car.overlaps(r)) {
-        score += 50;
-        // Ejemplo de obstáculo:
-        gasoline = max(0, gasoline - 30);
+      final r = Rect.fromLTWH(p.dx, p.dy, pacaSizeLocal, pacaSizeLocal).deflate(6.0);
+      if (carHit.overlaps(r)) {
+        // Pacas aumentan la gasolina (reabastecimiento)
+        gasoline = min(100, gasoline + 30);
         scoreChanged = true;
         return true;
       }
@@ -375,68 +395,46 @@ class _GamePageState extends State<GamePage> {
               child: Builder(builder: (context) {
                 final sceneAsset = SettingsService.availableScenes[SettingsService.selectedSceneIndex];
                 final screenW = MediaQuery.of(context).size.width;
+                final screenH = MediaQuery.of(context).size.height;
                 if (orientation == GameOrientation.vertical) {
+                  // Tile the background using the actual screen height so there
+                  // are no sudden gaps. We compute a base Y that moves as
+                  // backgroundOffset increases and then draw 3 tiles to cover
+                  // the viewport.
+                  final baseY = (backgroundOffset % screenH) - screenH;
                   return Stack(
-                    children: [
-                      Positioned(
-                        top: backgroundOffset - (_BACKGROUND_HEIGHT * 3),
+                    children: List.generate(3, (i) {
+                      final top = baseY + i * screenH;
+                      return Positioned(
+                        top: top,
                         left: 0,
                         right: 0,
-                        child: Image.asset(sceneAsset, height: _BACKGROUND_HEIGHT + 1, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        top: backgroundOffset - (_BACKGROUND_HEIGHT * 2),
-                        left: 0,
-                        right: 0,
-                        child: Image.asset(sceneAsset, height: _BACKGROUND_HEIGHT + 1, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        top: backgroundOffset - _BACKGROUND_HEIGHT,
-                        left: 0,
-                        right: 0,
-                        child: Image.asset(sceneAsset, height: _BACKGROUND_HEIGHT + 1, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        top: backgroundOffset,
-                        left: 0,
-                        right: 0,
-                        child: Image.asset(sceneAsset, height: _BACKGROUND_HEIGHT + 1, fit: BoxFit.cover),
-                      ),
-                    ],
+                        height: screenH,
+                        child: Image.asset(sceneAsset, height: screenH, fit: BoxFit.cover),
+                      );
+                    }),
                   );
                 } else {
-                  // horizontal scrolling: position images leftwards; fill entire screen height
+                  // Horizontal scrolling: use screen width to tile horizontally.
+                  final baseX = -(backgroundOffset % screenW);
                   return Stack(
-                    children: [
-                      Positioned(
-                        left: -backgroundOffset - (screenW * 3),
+                    children: List.generate(3, (i) {
+                      final left = baseX + i * screenW;
+                      return Positioned(
+                        left: left,
                         top: 0,
                         width: screenW,
                         bottom: 0,
-                        child: Image.asset(sceneAsset, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        left: -backgroundOffset - (screenW * 2),
-                        top: 0,
-                        width: screenW,
-                        bottom: 0,
-                        child: Image.asset(sceneAsset, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        left: -backgroundOffset - screenW,
-                        top: 0,
-                        width: screenW,
-                        bottom: 0,
-                        child: Image.asset(sceneAsset, fit: BoxFit.cover),
-                      ),
-                      Positioned(
-                        left: -backgroundOffset,
-                        top: 0,
-                        width: screenW,
-                        bottom: 0,
-                        child: Image.asset(sceneAsset, fit: BoxFit.cover),
-                      ),
-                    ],
+                        child: RotatedBox(
+                          quarterTurns: 1,
+                          child: SizedBox(
+                            width: screenW,
+                            height: screenH,
+                            child: Image.asset(sceneAsset, fit: BoxFit.cover),
+                          ),
+                        ),
+                      );
+                    }),
                   );
                 }
               }),
@@ -455,7 +453,9 @@ class _GamePageState extends State<GamePage> {
                   child: Image.asset("assets/paca.png", width: pacaSizeLocal),
                 )),
 
-            // REEMPLAZO POR EL WIDGET DraggableCar
+            // OBJETOS DEL JUEGO se renderizan antes de la UI
+
+            // Draw the DraggableCar (below the HUD) so the HUD overlays on top.
             if (orientation == GameOrientation.vertical)
               Align(
                 alignment: Alignment.bottomCenter,
@@ -482,29 +482,34 @@ class _GamePageState extends State<GamePage> {
                 ),
               )
             else
-              Positioned(
-                left: 20,
-                top: (MediaQuery.of(context).size.height / 2) - (carHeight / 2),
-                child: DraggableCar(
-                  imagePath: SettingsService.getCarAsset(SettingsService.selectedCarIndex, SettingsService.orientation),
-                  width: carWidth,
-                  height: carHeight,
-                  verticalMovement: true,
-                  onXPositionChanged: (newX) {
-                    if (isGameOver) return;
-                    setState(() {
-                      carX = newX;
-                    });
-                  },
-                  onYPositionChanged: (newY) {
-                    if (isGameOver) return;
-                    setState(() {
-                      carY = newY;
-                    });
-                  },
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 20),
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.5,
+                    height: MediaQuery.of(context).size.height,
+                    child: DraggableCar(
+                      imagePath: SettingsService.getCarAsset(SettingsService.selectedCarIndex, SettingsService.orientation),
+                      width: carWidth,
+                      height: carHeight,
+                      verticalMovement: true,
+                      onXPositionChanged: (newX) {
+                        if (isGameOver) return;
+                        setState(() {
+                          carX = newX;
+                        });
+                      },
+                      onYPositionChanged: (newY) {
+                        if (isGameOver) return;
+                        setState(() {
+                          carY = newY;
+                        });
+                      },
+                    ),
+                  ),
                 ),
               ),
-            // FIN DEL REEMPLAZO
 
             // SCORE Y GASOLINA (UI)
             Positioned(
@@ -546,6 +551,45 @@ class _GamePageState extends State<GamePage> {
                     ),
                   )
                 ],
+              ),
+            ),
+            // PAUSE BUTTON (top-right)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: IconButton(
+                icon: const Icon(Icons.pause_circle_filled, size: 36, color: Colors.white),
+                onPressed: () async {
+                  // Pause game and show confirmation
+                  _pauseGame();
+                  final wantExit = await showDialog<bool>(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('¿Salir?'),
+                      content: const Text('¿Seguro que deseas salir? Perderás tu progreso.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('Continuar'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: const Text('Salir', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (!mounted) return;
+                  if (wantExit == true) {
+                    // No guardar la puntuación al salir desde pausa
+                    Navigator.of(context).pop();
+                  } else {
+                    // Reanudar
+                    _resumeGame();
+                  }
+                },
               ),
             ),
             

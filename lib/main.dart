@@ -1,23 +1,40 @@
 import 'package:flutter/material.dart';
-//import 'package:flutter_dotenv/flutter_dotenv.dart';
-//import 'dart:async';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Importa la GamePage correcta desde su propio archivo
 import 'game_page.dart'; 
 import 'options_page_ui.dart';
 import 'services/music_service.dart';
 import 'services/settings_service.dart';
+import 'scoreboard_page.dart';
+import 'widgets/custom_menu_button.dart';
 
-// Ya no necesitamos importar DraggableCar aquí, ya que GamePage la importa.
-// import 'widgets/draggable_car.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Asegúrate de que dotenv.load se ejecuta antes de runApp si necesitas variables de entorno
-  // await dotenv.load(fileName: ".env"); 
+  try {
+    await dotenv.load(fileName: '.env');
+  } catch (e) {
+    // Si no existe .env, continúa.
+  }
 
-  // Asegura que SettingsService esté inicializado antes de arrancar la app
+  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+
+  if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
+    try {
+      await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+      debugPrint('✅ Supabase initialized');
+    } catch (e) {
+      debugPrint('❌ Error inicializando Supabase: $e');
+    }
+  } else {
+    debugPrint(
+      '⚠️ SUPABASE_URL or SUPABASE_ANON_KEY not found in .env — Supabase not initialized.',
+    );
+  }
+
   await SettingsService.init();
   runApp(const MyGameApp());
 }
@@ -36,7 +53,7 @@ class MyGameApp extends StatelessWidget {
 }
 
 // ----------------------------------------------------------
-// 1) MENÚ PRINCIPAL
+// MENÚ PRINCIPAL
 // ----------------------------------------------------------
 class MainMenuPage extends StatefulWidget {
   const MainMenuPage({super.key});
@@ -51,7 +68,6 @@ class _MainMenuPageState extends State<MainMenuPage> {
   @override
   void initState() {
     super.initState();
-    // Do not autoplay music — many browsers block autoplay. User can enable via button.
   }
 
   @override
@@ -66,95 +82,137 @@ class _MainMenuPageState extends State<MainMenuPage> {
       backgroundColor: Colors.blueGrey.shade900,
       body: Stack(
         children: [
-          // Fondo de pantalla del menú principal
           Positioned.fill(
             child: Image.asset(
               'assets/images/menu_start.jpg',
               fit: BoxFit.cover,
             ),
           ),
-          // Capa semitransparente para mejorar contraste de botones
+
           Positioned.fill(
-            child: Container(color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.01)),
-          ),
-          // Título separado y colocado más arriba que los botones
-          Align(
-            alignment: const Alignment(0, -0.80),
-            child: Text("CUMPAS SLIDE GAME",
-                style: TextStyle(
-                    fontSize: 40,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold)),
+            child: Container(color: const Color.fromRGBO(255, 255, 255, 0.01)),
           ),
 
-          // Zona de botones (se queda en la posición original)
+          Align(
+            alignment: const Alignment(0, -0.80),
+            child: const Text(
+              "CUMPAS SLIDE GAME",
+              style: TextStyle(
+                fontSize: 40,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
           Align(
             alignment: const Alignment(0, 0.40),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-            // --- BOTÓN JUGAR (Ahora usa la GamePage IMPORTADA) ---
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20),
-              ),
-              onPressed: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const GamePage()));
-              },
-              child: const Text("JUGAR", style: TextStyle(fontSize: 22)),
-            ),
+                // ---------------------------
+                // BOTÓN JUGAR
+                // ---------------------------
+                CustomMenuButton(
+                  buttonName: "play",
+                  onTap: () async {
+                    final name = await showDialog<String?>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) {
+                        String input = '';
+                        return AlertDialog(
+                          title: const Text('Ingresa tu nombre'),
+                          content: TextField(
+                            autofocus: true,
+                            decoration: const InputDecoration(hintText: 'Nombre'),
+                            onChanged: (v) => input = v,
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(null),
+                              child: const Text('Cancelar'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(input),
+                              child: const Text('Aceptar'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
 
-            const SizedBox(height: 20),
+                    if (name == null || name.trim().isEmpty) return;
+                    if (!mounted) return;
 
-            // --- BOTÓN OPCIONES ---
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20),
-              ),
-              onPressed: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const NewOptionsPage()));
-              },
-              child: const Text("OPCIONES", style: TextStyle(fontSize: 22)),
-            ),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GamePage(playerName: name.trim()),
+                      ),
+                    );
+                  },
+                ),
 
-            const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-            // --- BOTÓN SALIR ---
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 20),
-              ),
-              onPressed: () {
-                _confirmExit(context);
-              },
-              child: const Text("SALIR", style: TextStyle(fontSize: 22)),
-            ),
-          ],
+                // ---------------------------
+                // BOTÓN OPCIONES
+                // ---------------------------
+                CustomMenuButton(
+                  buttonName: "options",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const NewOptionsPage()),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                // ---------------------------
+                // BOTÓN PUNTUACIONES
+                // ---------------------------
+                CustomMenuButton(
+                  buttonName: "scoreboard",
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ScoreboardPage()),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                // ---------------------------
+                // BOTÓN SALIR
+                // ---------------------------
+                CustomMenuButton(
+                  buttonName: "exit",
+                  onTap: () => _confirmExit(context),
+                ),
+              ],
             ),
           ),
-          // Botón para activar/desactivar música (top-right)
+
           Positioned(
             right: 12,
             top: 12,
             child: IconButton(
-              icon: Icon(_isMusicPlaying ? Icons.volume_up : Icons.volume_off, color: Colors.white),
+              icon: Icon(
+                _isMusicPlaying ? Icons.volume_up : Icons.volume_off,
+                color: Colors.white,
+              ),
               onPressed: () async {
                 if (_isMusicPlaying) {
                   await MusicService.stop();
-                  setState(() {
-                    _isMusicPlaying = false;
-                  });
+                  setState(() => _isMusicPlaying = false);
                 } else {
                   await MusicService.playMenu();
-                  setState(() {
-                    _isMusicPlaying = true;
-                  });
+                  setState(() => _isMusicPlaying = true);
                 }
               },
             ),
@@ -163,8 +221,8 @@ class _MainMenuPageState extends State<MainMenuPage> {
       ),
     );
   }
-  
-  /// VENTANA DE CONFIRMACIÓN PARA SALIR
+
+  /// Confirmación para salir
   void _confirmExit(BuildContext context) {
     showDialog(
       context: context,
@@ -173,12 +231,13 @@ class _MainMenuPageState extends State<MainMenuPage> {
           title: const Text("¿Salir del juego?"),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text("Cancelar")),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Cancelar"),
+            ),
             TextButton(
-                // Esto solo cierra el diálogo en un entorno normal
-                onPressed: () => Navigator.pop(context), 
-                child: const Text("Salir")),
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Salir"),
+            ),
           ],
         );
       },
@@ -187,7 +246,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
 }
 
 // ----------------------------------------------------------
-// 3) PANTALLA DE OPCIONES
+// PANTALLA DE OPCIONES (placeholder)
 // ----------------------------------------------------------
 class OptionsPage extends StatelessWidget {
   const OptionsPage({super.key});
@@ -206,4 +265,3 @@ class OptionsPage extends StatelessWidget {
     );
   }
 }
-// NOTA: La clase GamePage ha sido eliminada de aquí y movida a game_page.dart

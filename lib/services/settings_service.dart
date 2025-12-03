@@ -15,6 +15,7 @@ class SettingsService {
   static const List<String> availableCars = [
     // store base names; actual asset depends on orientation
     'orange_car',
+    'moro'
   ];
 
   static String getCarAsset(int index, GameOrientation orientation) {
@@ -29,6 +30,8 @@ class SettingsService {
   static const List<String> availableScenes = [
     'assets/escenarios/camino.png',
     'assets/escenarios/calle.jpg',
+    'assets/escenarios/campo.jpg',
+    'assets/escenarios/playa.jpg',
   ];
 
   static void setOrientation(GameOrientation o) {
@@ -39,7 +42,7 @@ class SettingsService {
     if (index < 0 || index >= availableCars.length) return;
     selectedCarIndex = index;
     if (kDebugMode) {
-      print('SettingsService: selectedCarIndex = $selectedCarIndex');
+      debugPrint('SettingsService: selectedCarIndex = $selectedCarIndex');
     }
   }
 
@@ -47,7 +50,7 @@ class SettingsService {
     if (index < 0 || index >= availableScenes.length) return;
     selectedSceneIndex = index;
     if (kDebugMode) {
-      print('SettingsService: selectedSceneIndex = $selectedSceneIndex');
+      debugPrint('SettingsService: selectedSceneIndex = $selectedSceneIndex');
     }
   }
 
@@ -59,10 +62,10 @@ class SettingsService {
       selectedCarIndex = prefs.getInt('selectedCarIndex') ?? selectedCarIndex;
       selectedSceneIndex = prefs.getInt('selectedSceneIndex') ?? selectedSceneIndex;
       if (kDebugMode) {
-        print('SettingsService.init: orientation=$orientation, car=$selectedCarIndex, scene=$selectedSceneIndex');
+        debugPrint('SettingsService.init: orientation=$orientation, car=$selectedCarIndex, scene=$selectedSceneIndex');
       }
     } catch (e) {
-      if (kDebugMode) print('SettingsService.init error: $e');
+      if (kDebugMode) debugPrint('SettingsService.init error: $e');
     }
   }
 
@@ -73,9 +76,9 @@ class SettingsService {
       await prefs.setInt('orientation', orientation.index);
       await prefs.setInt('selectedCarIndex', selectedCarIndex);
       await prefs.setInt('selectedSceneIndex', selectedSceneIndex);
-      if (kDebugMode) print('SettingsService.save: saved');
+      if (kDebugMode) debugPrint('SettingsService.save: saved');
     } catch (e) {
-      if (kDebugMode) print('SettingsService.save error: $e');
+      if (kDebugMode) debugPrint('SettingsService.save error: $e');
     }
   }
 }

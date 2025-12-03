@@ -1,6 +1,6 @@
 {
-    "name": "slider_app",
-    "short_name": "slider_app",
+    "name": "cumpas_app",
+    "short_name": "cumpas_app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

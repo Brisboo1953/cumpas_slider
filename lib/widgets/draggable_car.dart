@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-//import 'dart:math';
 
 class DraggableCar extends StatefulWidget {
   final String imagePath;
@@ -44,9 +43,15 @@ class _DraggableCarState extends State<DraggableCar> {
         double halfCarHeight = widget.height / 2;
 
         // Límites para movimiento horizontal
-        // El carrito empieza más a la izquierda
-        double minX = -maxWidth / 2 + halfCarWidth - (maxWidth * 0.25);
-        double maxX = maxWidth / 2 - halfCarWidth - (maxWidth * 0.15);
+        // Ajustamos los factores de margen para dar menos libertad a la izquierda
+        // y algo más de libertad a la derecha.
+        // leftMarginFactor: porcentaje del ancho total que recorta el límite izquierdo
+        // rightMarginFactor: porcentaje del ancho total que recorta el límite derecho
+        double leftMarginFactor = 0.05; // 5% menos a la izquierda
+        double rightMarginFactor = 0.02; // 2% menos a la derecha
+
+        double minX = -maxWidth / 2 + halfCarWidth + (maxWidth * leftMarginFactor);
+        double maxX = maxWidth / 2 - halfCarWidth - (maxWidth * rightMarginFactor);
 
         // Límites para movimiento vertical (relativos al centro)
         double minY = -maxHeight / 2 + halfCarHeight;
@@ -73,11 +78,11 @@ class _DraggableCarState extends State<DraggableCar> {
               }
             });
           },
-          child: SizedBox(
+            child: SizedBox(
             width: maxWidth,
             height: widget.verticalMovement ? maxHeight : (widget.height + 20),
             child: Stack(
-              alignment: Alignment.center,
+              alignment: widget.verticalMovement ? Alignment.centerLeft : Alignment.center,
               children: [
                 Transform.translate(
                   offset: widget.verticalMovement ? Offset(0, _y) : Offset(_x, 0),

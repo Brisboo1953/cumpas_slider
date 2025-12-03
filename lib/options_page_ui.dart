@@ -193,8 +193,8 @@ class _NewOptionsPageState extends State<NewOptionsPage> {
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(color: selected ? Colors.lightGreenAccent : Colors.transparent, width: selected ? 3 : 1),
-                                  boxShadow: selected
-                                      ? [BoxShadow(color: Colors.lightGreenAccent.withOpacity(0.15), blurRadius: 12, spreadRadius: 2)]
+                                    boxShadow: selected
+                                      ? [BoxShadow(color: const Color.fromRGBO(204,255,144,0.15), blurRadius: 12, spreadRadius: 2)]
                                       : [],
                                   image: DecorationImage(image: AssetImage(asset), fit: BoxFit.cover),
                                 ),

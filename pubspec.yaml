@@ -49,6 +49,13 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -66,13 +73,16 @@ flutter:
     - .env
     - assets/cars/orange_car.png
     - assets/cars/orange_car_h.png
+    - assets/cars/
     - assets/escenarios/
     - assets/coin.png
     - assets/paca.png
     - assets/moro.mp3
+    - assets/ui/buttons/
     # Imagen de fondo del menú principal (añade el archivo en assets/images/)
     - assets/images/menu_bg.png
     - assets/images/menu_start.jpg
+    - assets/icon/icon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
