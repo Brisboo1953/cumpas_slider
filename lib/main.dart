@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Importado para SystemNavigator.pop()
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'game_page.dart';
-import 'options_page_ui.dart'; // Assuming this is where NewOptionsPage is defined
+import 'game_page.dart'; 
+import 'options_page_ui.dart';
 import 'services/music_service.dart';
 import 'services/settings_service.dart';
 import 'scoreboard_page.dart';
@@ -66,18 +65,6 @@ class MainMenuPage extends StatefulWidget {
 class _MainMenuPageState extends State<MainMenuPage> {
   bool _isMusicPlaying = false;
 
-  // Método para manejar el toggle de la música
-  void _toggleMusic() async {
-    if (_isMusicPlaying) {
-      await MusicService.stop();
-    } else {
-      await MusicService.playMenu();
-    }
-    setState(() {
-      _isMusicPlaying = !_isMusicPlaying;
-    });
-  }
-
   @override
   void initState() {
     super.initState();
@@ -95,7 +82,6 @@ class _MainMenuPageState extends State<MainMenuPage> {
       backgroundColor: Colors.blueGrey.shade900,
       body: Stack(
         children: [
-          // Fondo de pantalla
           Positioned.fill(
             child: Image.asset(
               'assets/images/menu_start.jpg',
@@ -103,15 +89,13 @@ class _MainMenuPageState extends State<MainMenuPage> {
             ),
           ),
 
-          // Capa de color semi-transparente (si es necesaria)
           Positioned.fill(
             child: Container(color: const Color.fromRGBO(255, 255, 255, 0.01)),
           ),
 
-          // TÍTULO
-          const Align(
-            alignment: Alignment(0, -0.80),
-            child: Text(
+          Align(
+            alignment: const Alignment(0, -0.80),
+            child: const Text(
               "CUMPAS SLIDE GAME",
               style: TextStyle(
                 fontSize: 40,
@@ -121,110 +105,132 @@ class _MainMenuPageState extends State<MainMenuPage> {
             ),
           ),
 
-          // ==========================================================
-          // 1. BOTÓN DE OPCIONES - SUPERIOR IZQUIERDA (Usando IconButton)
-          // ==========================================================
-          Positioned(
-            left: 12,
-            top: 40, // Ajustado para dejar espacio con la barra de estado
-            child: IconButton(
-              icon: const Icon(Icons.tune, color: Colors.white, size: 30),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NewOptionsPage()),
-                );
-              },
+          // Custom layout: play centered (bigger), exit under play (smaller),
+          // options top-left, scoreboard bottom-right.
+          Positioned.fill(
+            child: Stack(
+              children: [
+                // Center play + exit below
+                Align(
+                  alignment: Alignment(0, 0.30),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Play button, slightly larger
+                      CustomMenuButton(
+                        buttonName: 'play',
+                        width: 150,
+                        height: 150,
+                        scale: 1.0,
+                        onTap: () async {
+                          final name = await showDialog<String?>(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (ctx) {
+                              String input = '';
+                              return AlertDialog(
+                                title: const Text('Ingresa tu nombre'),
+                                content: TextField(
+                                  autofocus: true,
+                                  decoration: const InputDecoration(hintText: 'Nombre'),
+                                  onChanged: (v) => input = v,
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(null),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(ctx).pop(input),
+                                    child: const Text('Aceptar'),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+
+                          if (name == null || name.trim().isEmpty) return;
+                          if (!mounted) return;
+
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => GamePage(playerName: name.trim()),
+                            ),
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Exit button, smaller, under play
+                      CustomMenuButton(
+                        buttonName: 'exit',
+                        width: 90,
+                        height: 90,
+                        scale: 1.0,
+                        onTap: () => _confirmExit(context),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Options top-left
+                Positioned(
+                  left: 16,
+                  top: 16,
+                  child: CustomMenuButton(
+                    buttonName: 'options',
+                    width: 90,
+                    height: 90,
+                    scale: 1.0,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const NewOptionsPage()),
+                      );
+                    },
+                  ),
+                ),
+
+                // Scoreboard bottom-right
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: CustomMenuButton(
+                    buttonName: 'scoreboard',
+                    width: 90,
+                    height: 90,
+                    scale: 1.0,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ScoreboardPage()),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
 
-          // ==========================================================
-          // 2. BOTÓN DE CONFIGURACIÓN (MÚSICA/SONIDO) - SUPERIOR DERECHA (Usando IconButton)
-          // ==========================================================
           Positioned(
             right: 12,
-            top: 40, // Ajustado para dejar espacio con la barra de estado
+            top: 12,
             child: IconButton(
               icon: Icon(
                 _isMusicPlaying ? Icons.volume_up : Icons.volume_off,
                 color: Colors.white,
-                size: 30,
               ),
-              onPressed: _toggleMusic,
-            ),
-          ),
-          
-          // ==========================================================
-          // 3. BOTÓN JUGAR - EN MEDIO
-          // ==========================================================
-          Align(
-            alignment: Alignment.center,
-            child: CustomMenuButton(
-              buttonName: "play",
-              onTap: () async {
-                final name = await showDialog<String?>(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (ctx) {
-                    String input = '';
-                    return AlertDialog(
-                      title: const Text('Ingresa tu nombre'),
-                      content: TextField(
-                        autofocus: true,
-                        decoration: const InputDecoration(hintText: 'Nombre'),
-                        onChanged: (v) => input = v,
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(null),
-                          child: const Text('Cancelar'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(input),
-                          child: const Text('Aceptar'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-
-                if (name == null || name.trim().isEmpty) return;
-                if (!mounted) return;
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GamePage(playerName: name.trim()),
-                  ),
-                );
+              onPressed: () async {
+                if (_isMusicPlaying) {
+                  await MusicService.stop();
+                  setState(() => _isMusicPlaying = false);
+                } else {
+                  await MusicService.playMenu();
+                  setState(() => _isMusicPlaying = true);
+                }
               },
-            ),
-          ),
-          
-          // ==========================================================
-          // 4. BOTÓN PUNTUACIONES - DERECHA EN MEDIO (Corregido)
-          // ==========================================================
-          Align(
-            alignment: const Alignment(0.95, 0),
-            child: CustomMenuButton(
-              buttonName: "Scoreboard",
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ScoreboardPage()),
-                );
-              },
-            ),
-          ),
-
-          // ==========================================================
-          // 5. BOTÓN SALIR - ABAJO EN MEDIO
-          // ==========================================================
-          Align(
-            alignment: const Alignment(0, 0.85),
-            child: CustomMenuButton(
-              buttonName: "exit",
-              onTap: () => _confirmExit(context),
             ),
           ),
         ],
@@ -245,13 +251,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
               child: const Text("Cancelar"),
             ),
             TextButton(
-              onPressed: () {
-                // Cierra el diálogo antes de intentar salir de la aplicación
-                Navigator.pop(ctx); 
-                // Cierra la aplicación de manera programática
-                // SystemNavigator.pop() intenta cerrar la aplicación.
-                SystemNavigator.pop(); 
-              },
+              onPressed: () => Navigator.pop(context),
               child: const Text("Salir"),
             ),
           ],

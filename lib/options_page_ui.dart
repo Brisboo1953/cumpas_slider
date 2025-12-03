@@ -146,7 +146,6 @@ class _NewOptionsPageState extends State<NewOptionsPage> {
                                     children: [
                                       Expanded(child: Image.asset(asset, fit: BoxFit.contain)),
                                       const SizedBox(height: 6),
-                                      const Text('Carro naranja', style: TextStyle(color: Colors.white)),
                                     ],
                                   ),
                                 ),
