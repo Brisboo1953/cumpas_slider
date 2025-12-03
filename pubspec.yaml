@@ -69,6 +69,9 @@ flutter:
     - assets/coin.png
     - assets/paca.png
     - assets/moro.mp3
+    # Imagen de fondo del menú principal (añade el archivo en assets/images/)
+    - assets/images/menu_bg.png
+    - assets/images/menu_start.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

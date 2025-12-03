@@ -33,7 +33,7 @@ class MyGameApp extends StatelessWidget {
 }
 
 // ----------------------------------------------------------
-// 1) MENÚ PRINCIPAL
+// 1) MENÚ PRINCIPALhbedhwbdihas
 // ----------------------------------------------------------
 class MainMenuPage extends StatefulWidget {
   const MainMenuPage({super.key});
@@ -63,18 +63,34 @@ class _MainMenuPageState extends State<MainMenuPage> {
       backgroundColor: Colors.blueGrey.shade900,
       body: Stack(
         children: [
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-            Text("CAR GAME",
+          // Fondo de pantalla del menú principal
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/menu_start.jpg',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Capa semitransparente para mejorar contraste de botones
+          Positioned.fill(
+            child: Container(color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.01)),
+          ),
+          // Título separado y colocado más arriba que los botones
+          Align(
+            alignment: const Alignment(0, -0.80),
+            child: Text("CUMPAS SLIDE GAME",
                 style: TextStyle(
                     fontSize: 40,
                     color: Colors.white,
                     fontWeight: FontWeight.bold)),
+          ),
 
-            const SizedBox(height: 60),
-
+          // Zona de botones (se queda en la posición original)
+          Align(
+            alignment: const Alignment(0, 0.40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
             // --- BOTÓN JUGAR (Ahora usa la GamePage IMPORTADA) ---
             ElevatedButton(
               style: ElevatedButton.styleFrom(
