@@ -3,14 +3,14 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 // * IMPORTACIÓN CORREGIDA para la estructura lib/widgets/draggable_car.dart *
 import 'widgets/draggable_car.dart'; 
+import 'services/settings_service.dart';
 
 // Asegúrate de que estas importaciones de servicios estén disponibles si las usas.
 // Si no tienes estas clases, puedes borrarlas temporalmente para que compile.
-import 'services/music_service.dart';
-import 'services/settings_service.dart';
+//import 'services/music_service.dart';
+//import 'services/settings_service.dart';
 
-// Asumo que esta enumeración está en settings_service.dart o debe definirse aquí
-enum GameOrientation { vertical, horizontal } 
+// GameOrientation is defined in settings_service.dart
 
 const double _coinSize = 40.0;
 // * MODIFICACIÓN: Pacas más grandes (de 60.0 a 80.0) *
@@ -29,9 +29,14 @@ class GamePage extends StatefulWidget {
 class _GamePageState extends State<GamePage> {
   // carX guarda el desplazamiento horizontal desde el centro (reportado por DraggableCar)
   double carX = 0; 
+  double carY = 0; 
   double carWidth = 100;
   double carHeight = 60;
   double maxCarOffsetX = 0; 
+
+  // Sizes that adapt to orientation
+  double coinSize = _coinSize;
+  double pacaSizeLocal = _pacaSize;
 
   List<Offset> coins = [];
   List<Offset> pacas = [];
@@ -59,6 +64,19 @@ class _GamePageState extends State<GamePage> {
   @override
   void initState() {
     super.initState();
+    // Load orientation from settings and adapt sizes
+    orientation = SettingsService.orientation;
+    if (orientation == GameOrientation.horizontal) {
+      carWidth = 140;
+      carHeight = 50;
+      coinSize = 28.0;
+      pacaSizeLocal = 60.0;
+    } else {
+      carWidth = 100;
+      carHeight = 60;
+      coinSize = _coinSize;
+      pacaSizeLocal = _pacaSize;
+    }
     // Intenta parar la música, ajusta si tus servicios no existen
     // MusicService.stop(); 
 
@@ -135,18 +153,30 @@ class _GamePageState extends State<GamePage> {
   void _spawnCoins(int count) {
     final random = Random();
     final w = MediaQuery.of(context).size.width;
+    final h = MediaQuery.of(context).size.height;
 
     for (int i = 0; i < count; i++) {
-      coins.add(Offset(random.nextDouble() * (w - _coinSize), -_coinSize));
+      if (orientation == GameOrientation.vertical) {
+        coins.add(Offset(random.nextDouble() * (w - coinSize), -coinSize));
+      } else {
+        // spawn to the right off-screen with random Y
+        coins.add(Offset(w + coinSize, random.nextDouble() * (h - coinSize)));
+      }
     }
   }
 
   void _spawnPaca(int count) {
     final random = Random();
     final w = MediaQuery.of(context).size.width;
+    final h = MediaQuery.of(context).size.height;
 
     for (int i = 0; i < count; i++) {
-      pacas.add(Offset(random.nextDouble() * (w - _pacaSize), -_pacaSize));
+      if (orientation == GameOrientation.vertical) {
+        pacas.add(Offset(random.nextDouble() * (w - pacaSizeLocal), -pacaSizeLocal));
+      } else {
+        // spawn to the right off-screen with random Y
+        pacas.add(Offset(w + pacaSizeLocal, random.nextDouble() * (h - pacaSizeLocal)));
+      }
     }
   }
 
@@ -161,26 +191,45 @@ class _GamePageState extends State<GamePage> {
       setState(() {
         backgroundOffset += backgroundSpeed;
         
-        // * FIX DEL CORTE: Reinicia el desplazamiento cuando la primera imagen ha pasado de largo*
-        // Si backgroundOffset excede la altura de la imagen, reinicia el desplazamiento restando
-        // la altura de la imagen. Esto asegura un loop perfecto.
-        if (backgroundOffset >= _BACKGROUND_HEIGHT) {
-             backgroundOffset -= _BACKGROUND_HEIGHT; 
+        // * Reinicio suave del fondo para efecto infinito sin espacios en blanco *
+        // En lugar de restar cuando llega a un tile, se mantiene un offset continuo
+        // que genera tiles adicionales según sea necesario
+        if (orientation == GameOrientation.vertical) {
+          // Para vertical: resetear cada 2 alturas de background para evitar acumulación
+          if (backgroundOffset >= _BACKGROUND_HEIGHT * 3) {
+            backgroundOffset -= _BACKGROUND_HEIGHT * 2;
+          }
+        } else {
+          final screenW = MediaQuery.of(context).size.width;
+          // Para horizontal: resetear cada 2 anchos de screen
+          if (backgroundOffset >= screenW * 3) {
+            backgroundOffset -= screenW * 2;
+          }
         }
 
-        // Mueve monedas
-        // La velocidad de los objetos está ligada a la velocidad del fondo (backgroundSpeed)
-        coins = coins
-            .map((c) => Offset(c.dx, c.dy + backgroundSpeed * 0.8)) 
+        // Mueve objetos según orientación
+        if (orientation == GameOrientation.vertical) {
+          coins = coins
+            .map((c) => Offset(c.dx, c.dy + backgroundSpeed * 0.8))
             .where((c) => c.dy < h + 50)
             .toList();
 
-        // Mueve pacas
-        // La velocidad de los objetos está ligada a la velocidad del fondo (backgroundSpeed)
-        pacas = pacas
-            .map((p) => Offset(p.dx, p.dy + backgroundSpeed * 0.8)) 
+          pacas = pacas
+            .map((p) => Offset(p.dx, p.dy + backgroundSpeed * 0.8))
             .where((p) => p.dy < h + 50)
             .toList();
+        } else {
+          // horizontal: move objects left as background scrolls right->left
+          coins = coins
+            .map((c) => Offset(c.dx - backgroundSpeed * 0.8, c.dy))
+            .where((c) => c.dx > -50)
+            .toList();
+
+          pacas = pacas
+            .map((p) => Offset(p.dx - backgroundSpeed * 0.8, p.dy))
+            .where((p) => p.dx > -50)
+            .toList();
+        }
 
         // La verificación de colisión sigue aquí, sincronizada con el juego.
         _checkCollision(); 
@@ -196,13 +245,20 @@ class _GamePageState extends State<GamePage> {
     // El padding inferior de SafeArea (usado para la parte segura del teléfono)
     final bottomPadding = MediaQuery.of(context).padding.bottom; 
 
-    // Cálculo de la posición X del borde izquierdo (Left)
-    final left = (screenW / 2) + carX - (carWidth / 2);
+    if (orientation == GameOrientation.vertical) {
+      // Cálculo de la posición X del borde izquierdo (Left)
+      final left = (screenW / 2) + carX - (carWidth / 2);
 
-    // Cálculo de la posición Y del borde superior (Top)
-    final top = screenH - _carVerticalOffset - carHeight - bottomPadding;
+      // Cálculo de la posición Y del borde superior (Top)
+      final top = screenH - _carVerticalOffset - carHeight - bottomPadding;
 
-    return Rect.fromLTWH(left, top, carWidth, carHeight);
+      return Rect.fromLTWH(left, top, carWidth, carHeight);
+    } else {
+      // Horizontal: el carro se mueve en el eje Y, centrado horizontalmente
+      final left = (screenW - carWidth) / 2;
+      final top = (screenH / 2) + carY - (carHeight / 2);
+      return Rect.fromLTWH(left, top, carWidth, carHeight);
+    }
   }
 
   void _checkCollision() {
@@ -211,7 +267,7 @@ class _GamePageState extends State<GamePage> {
 
     // Colisión con Monedas
     coins.removeWhere((c) {
-      final r = Rect.fromLTWH(c.dx, c.dy, _coinSize, _coinSize);
+      final r = Rect.fromLTWH(c.dx, c.dy, coinSize, coinSize);
       if (car.overlaps(r)) {
         score += 10;
         gasoline = min(100, gasoline + 5);
@@ -223,7 +279,7 @@ class _GamePageState extends State<GamePage> {
 
     // Colisión con Pacas
     pacas.removeWhere((p) {
-      final r = Rect.fromLTWH(p.dx, p.dy, _pacaSize, _pacaSize);
+      final r = Rect.fromLTWH(p.dx, p.dy, pacaSizeLocal, pacaSizeLocal);
       if (car.overlaps(r)) {
         score += 50;
         // Ejemplo de obstáculo:
@@ -316,80 +372,138 @@ class _GamePageState extends State<GamePage> {
           children: [
             // FONDO (USANDO TRES IMÁGENES PARA DESPLAZAMIENTO FLUIDO)
             Positioned.fill(
-              child: Stack(
-                children: [
-                  // Imagen 1: La que sale de la parte superior
-                  Positioned(
-                    // La posición superior se calcula para que la imagen 1 empiece donde termina la 2
-                    top: backgroundOffset - (_BACKGROUND_HEIGHT * 2),
-                    left: 0,
-                    right: 0,
-                    child: Image.asset(
-                      "assets/camino.png",
-                      height: _BACKGROUND_HEIGHT + 1, // +1 para asegurar la superposición
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  // Imagen 2: La que está justo arriba del centro
-                  Positioned(
-                    // La posición superior se calcula para que la imagen 2 empiece donde termina la 3
-                    top: backgroundOffset - _BACKGROUND_HEIGHT,
-                    left: 0,
-                    right: 0,
-                    child: Image.asset(
-                      "assets/camino.png",
-                      height: _BACKGROUND_HEIGHT + 1, 
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  // Imagen 3: La que está en la parte inferior de la pantalla (visible)
-                  Positioned(
-                    top: backgroundOffset,
-                    left: 0,
-                    right: 0,
-                    child: Image.asset(
-                      "assets/camino.png",
-                      height: _BACKGROUND_HEIGHT + 1, 
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ],
-              ),
+              child: Builder(builder: (context) {
+                final sceneAsset = SettingsService.availableScenes[SettingsService.selectedSceneIndex];
+                final screenW = MediaQuery.of(context).size.width;
+                if (orientation == GameOrientation.vertical) {
+                  return Stack(
+                    children: [
+                      Positioned(
+                        top: backgroundOffset - (_BACKGROUND_HEIGHT * 3),
+                        left: 0,
+                        right: 0,
+                        child: Image.asset(sceneAsset, height: _BACKGROUND_HEIGHT + 1, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        top: backgroundOffset - (_BACKGROUND_HEIGHT * 2),
+                        left: 0,
+                        right: 0,
+                        child: Image.asset(sceneAsset, height: _BACKGROUND_HEIGHT + 1, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        top: backgroundOffset - _BACKGROUND_HEIGHT,
+                        left: 0,
+                        right: 0,
+                        child: Image.asset(sceneAsset, height: _BACKGROUND_HEIGHT + 1, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        top: backgroundOffset,
+                        left: 0,
+                        right: 0,
+                        child: Image.asset(sceneAsset, height: _BACKGROUND_HEIGHT + 1, fit: BoxFit.cover),
+                      ),
+                    ],
+                  );
+                } else {
+                  // horizontal scrolling: position images leftwards; fill entire screen height
+                  return Stack(
+                    children: [
+                      Positioned(
+                        left: -backgroundOffset - (screenW * 3),
+                        top: 0,
+                        width: screenW,
+                        bottom: 0,
+                        child: Image.asset(sceneAsset, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        left: -backgroundOffset - (screenW * 2),
+                        top: 0,
+                        width: screenW,
+                        bottom: 0,
+                        child: Image.asset(sceneAsset, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        left: -backgroundOffset - screenW,
+                        top: 0,
+                        width: screenW,
+                        bottom: 0,
+                        child: Image.asset(sceneAsset, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        left: -backgroundOffset,
+                        top: 0,
+                        width: screenW,
+                        bottom: 0,
+                        child: Image.asset(sceneAsset, fit: BoxFit.cover),
+                      ),
+                    ],
+                  );
+                }
+              }),
             ),
 
             // OBJETOS (Monedas y Pacas)
             ...coins.map((c) => Positioned(
                   left: c.dx,
                   top: c.dy,
-                  child: Image.asset("assets/coin.png", width: _coinSize),
+                  child: Image.asset("assets/coin.png", width: coinSize),
                 )),
             ...pacas.map((p) => Positioned(
                   left: p.dx,
                   top: p.dy,
-                  // Ahora usa _pacaSize = 80.0
-                  child: Image.asset("assets/paca.png", width: _pacaSize),
+                  // Usa tamaño adaptativo
+                  child: Image.asset("assets/paca.png", width: pacaSizeLocal),
                 )),
 
             // REEMPLAZO POR EL WIDGET DraggableCar
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: _carVerticalOffset),
+            if (orientation == GameOrientation.vertical)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: _carVerticalOffset),
+                  child: DraggableCar(
+                    imagePath: SettingsService.getCarAsset(SettingsService.selectedCarIndex, SettingsService.orientation),
+                    width: carWidth,
+                    height: carHeight,
+                    verticalMovement: false,
+                    onXPositionChanged: (newX) {
+                      if (isGameOver) return;
+                      setState(() {
+                        carX = newX;
+                      });
+                    },
+                    onYPositionChanged: (newY) {
+                      if (isGameOver) return;
+                      setState(() {
+                        carY = newY;
+                      });
+                    },
+                  ),
+                ),
+              )
+            else
+              Positioned(
+                left: 20,
+                top: (MediaQuery.of(context).size.height / 2) - (carHeight / 2),
                 child: DraggableCar(
-                  imagePath: "assets/cars/orange_car.png",
+                  imagePath: SettingsService.getCarAsset(SettingsService.selectedCarIndex, SettingsService.orientation),
                   width: carWidth,
                   height: carHeight,
-                  // Captura el desplazamiento _x del carro
+                  verticalMovement: true,
                   onXPositionChanged: (newX) {
-                    // Evita mover el carro si el juego ha terminado.
-                    if (isGameOver) return; 
+                    if (isGameOver) return;
                     setState(() {
                       carX = newX;
                     });
                   },
+                  onYPositionChanged: (newY) {
+                    if (isGameOver) return;
+                    setState(() {
+                      carY = newY;
+                    });
+                  },
                 ),
               ),
-            ),
             // FIN DEL REEMPLAZO
 
             // SCORE Y GASOLINA (UI)

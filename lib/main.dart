@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:async';
+//import 'package:flutter_dotenv/flutter_dotenv.dart';
+//import 'dart:async';
 
 // Importa la GamePage correcta desde su propio archivo
 import 'game_page.dart'; 
 import 'options_page_ui.dart';
 import 'services/music_service.dart';
+import 'services/settings_service.dart';
 
 // Ya no necesitamos importar DraggableCar aquí, ya que GamePage la importa.
 // import 'widgets/draggable_car.dart'; 
@@ -16,6 +17,8 @@ void main() async {
   // Asegúrate de que dotenv.load se ejecuta antes de runApp si necesitas variables de entorno
   // await dotenv.load(fileName: ".env"); 
 
+  // Asegura que SettingsService esté inicializado antes de arrancar la app
+  await SettingsService.init();
   runApp(const MyGameApp());
 }
 
@@ -33,7 +36,7 @@ class MyGameApp extends StatelessWidget {
 }
 
 // ----------------------------------------------------------
-// 1) MENÚ PRINCIPALhbedhwbdihas
+// 1) MENÚ PRINCIPAL
 // ----------------------------------------------------------
 class MainMenuPage extends StatefulWidget {
   const MainMenuPage({super.key});

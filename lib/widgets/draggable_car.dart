@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:math';
+//import 'dart:math';
 
 class DraggableCar extends StatefulWidget {
   final String imagePath;
@@ -9,6 +9,8 @@ class DraggableCar extends StatefulWidget {
   final ValueChanged<int>? onScoreChanged;
   // CAMBIO CLAVE: Ahora solo reportamos el desplazamiento horizontal (_x)
   final ValueChanged<double>? onXPositionChanged; 
+  final ValueChanged<double>? onYPositionChanged;
+  final bool verticalMovement;
 
   const DraggableCar({
     super.key,
@@ -17,6 +19,8 @@ class DraggableCar extends StatefulWidget {
     this.height = 60,
     this.onScoreChanged,
     this.onXPositionChanged, // Usamos la nueva propiedad
+    this.onYPositionChanged,
+    this.verticalMovement = false,
   });
 
   @override
@@ -33,42 +37,50 @@ class _DraggableCarState extends State<DraggableCar> {
     return LayoutBuilder(
       builder: (context, c) {
         maxWidth = c.maxWidth;
+        double maxHeight = c.maxHeight;
+        if (!maxHeight.isFinite) maxHeight = MediaQuery.of(context).size.height;
+
         double halfCarWidth = widget.width / 2;
-        
-        // El desplazamiento máximo es la mitad del contenedor menos la mitad del carro
-        double minX = -maxWidth / 2 + halfCarWidth;
-        double maxX = maxWidth / 2 - halfCarWidth;
+        double halfCarHeight = widget.height / 2;
+
+        // Límites para movimiento horizontal
+        // El carrito empieza más a la izquierda
+        double minX = -maxWidth / 2 + halfCarWidth - (maxWidth * 0.25);
+        double maxX = maxWidth / 2 - halfCarWidth - (maxWidth * 0.15);
+
+        // Límites para movimiento vertical (relativos al centro)
+        double minY = -maxHeight / 2 + halfCarHeight;
+        double maxY = maxHeight / 2 - halfCarHeight;
 
         return GestureDetector(
-          // Si el usuario presiona en un punto, el carro debe saltar a esa posición.
           onPanStart: (d) {
-            setState(() {
-              // Calcula la posición absoluta del toque con respecto al centro
-              _x = d.localPosition.dx - (maxWidth / 2);
-              _x = _x.clamp(minX, maxX); 
-            });
-            widget.onXPositionChanged?.call(_x); 
+            // No special action needed on start; we update in onPanUpdate
           },
           onPanUpdate: (d) {
             setState(() {
-              // CAMBIO CLAVE DE INTERACCIÓN: Mover el carro a la posición absoluta del toque.
-              _x = d.localPosition.dx - (maxWidth / 2);
-              
-              // Asegura que el carro no se salga de los límites del contenedor
-              _x = _x.clamp(minX, maxX); 
-              widget.onScoreChanged?.call(_calcScore());
+              if (widget.verticalMovement) {
+                double newY = d.localPosition.dy - (maxHeight / 2);
+                newY = newY.clamp(minY, maxY);
+                // store vertical offset in a temporary field by reusing _x? Better to use a new state var
+                // We'll add _y field to the state class dynamically below if not present.
+                _y = newY;
+                widget.onYPositionChanged?.call(_y);
+              } else {
+                _x = d.localPosition.dx - (maxWidth / 2);
+                _x = _x.clamp(minX, maxX);
+                widget.onScoreChanged?.call(_calcScore());
+                widget.onXPositionChanged?.call(_x);
+              }
             });
-            // Reportamos el _x en cada actualización, que es una operación muy rápida
-            widget.onXPositionChanged?.call(_x); 
           },
           child: SizedBox(
             width: maxWidth,
-            height: widget.height + 20, // Altura ajustada
+            height: widget.verticalMovement ? maxHeight : (widget.height + 20),
             child: Stack(
               alignment: Alignment.center,
               children: [
                 Transform.translate(
-                  offset: Offset(_x, 0),
+                  offset: widget.verticalMovement ? Offset(0, _y) : Offset(_x, 0),
                   child: Container(
                     width: widget.width,
                     height: widget.height,
@@ -82,6 +94,9 @@ class _DraggableCarState extends State<DraggableCar> {
       },
     );
   }
+
+  // vertical offset stored here
+  double _y = 0;
 
   // Función original para calcular un score (no modificada)
   int _calcScore() {

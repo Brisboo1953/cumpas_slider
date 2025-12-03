@@ -37,6 +37,7 @@ dependencies:
   supabase_flutter: ^2.10.3
   flutter_dotenv: ^5.1.0
   audioplayers: ^6.5.1
+  shared_preferences: ^2.0.19
 
 dev_dependencies:
   flutter_test:
@@ -65,7 +66,7 @@ flutter:
     - .env
     - assets/cars/orange_car.png
     - assets/cars/orange_car_h.png
-    - assets/camino.png
+    - assets/escenarios/
     - assets/coin.png
     - assets/paca.png
     - assets/moro.mp3
