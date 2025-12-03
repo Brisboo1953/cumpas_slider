@@ -6,19 +6,18 @@ import 'widgets/draggable_car.dart';
 import 'services/settings_service.dart';
 import 'services/supabase_service.dart';
 
-// Asegúrate de que estas importaciones de servicios estén disponibles si las usas.
-// Si no tienes estas clases, puedes borrarlas temporalmente para que compile.
-//import 'services/music_service.dart';
-//import 'services/settings_service.dart';
-
-// GameOrientation is defined in settings_service.dart
-
+// Definiciones de constantes para objetos
 const double _coinSize = 40.0;
-// * MODIFICACIÓN: Pacas más grandes (de 60.0 a 80.0) *
 const double _pacaSize = 80.0; 
-const double _carVerticalOffset = 20.0; // Distancia del carro al borde inferior
-const double _BACKGROUND_HEIGHT = 600.0; // Altura original de la imagen del camino
-// La altura de la imagen debe ser igual a la constante _BACKGROUND_HEIGHT.
+// --- CONSTANTES DE SERPIENTE ACTUALIZADAS ---
+const double _snakeSize = 60.0; 
+const double _snakeGasolinePenalty = 20.0; 
+// ------------------------------------------
+const double _carVerticalOffset = 20.0; 
+const double _BACKGROUND_HEIGHT = 600.0; 
+
+// ELIMINADA la definición local de 'GameOrientation' para evitar conflictos de tipo.
+// Ahora se asume que GameOrientation se obtiene de 'settings_service.dart'.
 
 class GamePage extends StatefulWidget {
   final String? playerName;
@@ -29,64 +28,69 @@ class GamePage extends StatefulWidget {
 }
 
 class _GamePageState extends State<GamePage> {
-  // carX guarda el desplazamiento horizontal desde el centro (reportado por DraggableCar)
+  // Posición y tamaño del auto
   double carX = 0; 
   double carY = 0; 
   double carWidth = 100;
   double carHeight = 60;
   
-  // Sizes that adapt to orientation
+  // Tamaños adaptativos a la orientación
   double coinSize = _coinSize;
   double pacaSizeLocal = _pacaSize;
+  double snakeSizeLocal = _snakeSize; 
 
+  // Listas de objetos en el juego
   List<Offset> coins = [];
   List<Offset> pacas = [];
+  List<Offset> snakes = []; 
 
+  // Estado del juego
   int score = 0;
   double gasoline = 100;
-  
-  // * NUEVO: Estado del juego *
   bool isGameOver = false;
 
+  // Temporizadores
   Timer? objectTimer;
   Timer? moveTimer;
   Timer? gasolineTimer;
 
+  // Movimiento
   double backgroundOffset = 0;
-  // Velocidad inicial del fondo
   double backgroundSpeed = 5; 
   
-  // * NUEVO: Variables para el control de Nivel y Dificultad *
+  // Nivel de dificultad
   int currentLevel = 1;
-  int nextLevelScore = 500; // Puntuación inicial para subir al Nivel 2
+  int nextLevelScore = 500; 
 
+  // La orientación ahora usa el tipo GameOrientation de SettingsService.
   GameOrientation orientation = GameOrientation.vertical;
 
   @override
   void initState() {
     super.initState();
-    // Load orientation from settings and adapt sizes
+    
+    // Obteniendo la orientación desde SettingsService para inicializar el estado
     orientation = SettingsService.orientation;
+    
     if (orientation == GameOrientation.horizontal) {
       carWidth = 140;
       carHeight = 50;
       coinSize = 28.0;
       pacaSizeLocal = 60.0;
+      snakeSizeLocal = 45.0; 
     } else {
       carWidth = 100;
       carHeight = 60;
       coinSize = _coinSize;
       pacaSizeLocal = _pacaSize;
+      snakeSizeLocal = _snakeSize; 
     }
-    // Intenta parar la música, ajusta si tus servicios no existen
-    // MusicService.stop(); 
 
     _startGasoline();
     _startObjects();
     _startMovement();
   }
   
-  // Detiene todos los temporizadores al final del juego
   void _stopGame() {
     moveTimer?.cancel();
     objectTimer?.cancel();
@@ -106,21 +110,16 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _resumeGame() {
-    // Evita duplicar timers
     if (moveTimer == null || !(moveTimer?.isActive ?? false)) _startMovement();
     if (objectTimer == null || !(objectTimer?.isActive ?? false)) _startObjects();
     if (gasolineTimer == null || !(gasolineTimer?.isActive ?? false)) _startGasoline();
   }
 
-  // * Lógica para subir de nivel y aumentar la velocidad *
   void _updateLevel() {
     if (score >= nextLevelScore) {
       setState(() {
         currentLevel++;
-        backgroundSpeed += 2; // Aumentamos la velocidad de forma más notoria
-        
-        // Define el siguiente objetivo de puntuación con un incremento fijo (500)
-        // Esto hace la progresión más lineal y controlable.
+        backgroundSpeed += 2; 
         nextLevelScore += 500; 
       });
       debugPrint("LEVEL UP! Level: $currentLevel, Speed: $backgroundSpeed, Next Score: $nextLevelScore");
@@ -133,16 +132,14 @@ class _GamePageState extends State<GamePage> {
       if (gasoline <= 0) {
         gasoline = 0;
         timer.cancel();
-        // Lógica de Game Over
+        
         setState(() {
           isGameOver = true;
-          _stopGame(); // Asegura que se detengan todos los movimientos
+          _stopGame(); 
         });
         
-        // DEBUG: Muestra en consola que Game Over se activó
         debugPrint("GAME OVER TRIGGERED. Score: $score");
         
-        // Guarda la puntuación si hay un nombre válido
         if (widget.playerName != null && widget.playerName!.trim().isNotEmpty) {
           SupabaseService().insertScore(name: widget.playerName!.trim(), score: score);
         }
@@ -156,25 +153,23 @@ class _GamePageState extends State<GamePage> {
   // GENERA OBJETOS
   void _startObjects() {
     objectTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      // Si el juego ha terminado, no generamos más objetos.
       if (isGameOver) return; 
 
       _spawnCoins(1);
       if (timer.tick % 3 == 0) _spawnPaca(1);
+      if (timer.tick % 4 == 0) _spawnSnake(1); 
     });
   }
 
   void _spawnCoins(int count) {
     final random = Random();
     final w = MediaQuery.of(context).size.width;
-    final h = MediaQuery.of(context).size.height;
 
     for (int i = 0; i < count; i++) {
       if (orientation == GameOrientation.vertical) {
         coins.add(Offset(random.nextDouble() * (w - coinSize), -coinSize));
       } else {
-        // spawn to the right off-screen with random Y
-        coins.add(Offset(w + coinSize, random.nextDouble() * (h - coinSize)));
+        coins.add(Offset(w + coinSize, random.nextDouble() * (MediaQuery.of(context).size.height - coinSize)));
       }
     }
   }
@@ -182,42 +177,52 @@ class _GamePageState extends State<GamePage> {
   void _spawnPaca(int count) {
     final random = Random();
     final w = MediaQuery.of(context).size.width;
-    final h = MediaQuery.of(context).size.height;
 
     for (int i = 0; i < count; i++) {
       if (orientation == GameOrientation.vertical) {
         pacas.add(Offset(random.nextDouble() * (w - pacaSizeLocal), -pacaSizeLocal));
       } else {
-        // spawn to the right off-screen with random Y
-        pacas.add(Offset(w + pacaSizeLocal, random.nextDouble() * (h - pacaSizeLocal)));
+        pacas.add(Offset(w + pacaSizeLocal, random.nextDouble() * (MediaQuery.of(context).size.height - pacaSizeLocal)));
       }
     }
   }
+  
+  // --- FUNCIÓN PARA GENERAR SERPIENTES ---
+  void _spawnSnake(int count) {
+    final random = Random();
+    final w = MediaQuery.of(context).size.width;
+
+    for (int i = 0; i < count; i++) {
+      if (orientation == GameOrientation.vertical) {
+        snakes.add(Offset(random.nextDouble() * (w - snakeSizeLocal), -snakeSizeLocal));
+      } else {
+        snakes.add(Offset(w + snakeSizeLocal, random.nextDouble() * (MediaQuery.of(context).size.height - snakeSizeLocal)));
+      }
+    }
+  }
+  // --------------------------------------
 
   // MUEVE OBJETOS Y FONDO
   void _startMovement() {
     moveTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
-      // Si el juego ha terminado, no movemos nada.
       if (isGameOver) return; 
 
       final h = MediaQuery.of(context).size.height;
+      final w = MediaQuery.of(context).size.width;
 
       setState(() {
         backgroundOffset += backgroundSpeed;
         
-        // * Reinicio suave del fondo para efecto infinito sin espacios en blanco *
-        // En lugar de restar cuando llega a un tile, se mantiene un offset continuo
-        // que genera tiles adicionales según sea necesario
+        // Lógica de desplazamiento del fondo mejorada para evitar el "corte" en modo vertical
         if (orientation == GameOrientation.vertical) {
-          // Para vertical: resetear cada 2 alturas de background para evitar acumulación
-          if (backgroundOffset >= _BACKGROUND_HEIGHT * 3) {
-            backgroundOffset -= _BACKGROUND_HEIGHT * 2;
+          // Usamos la altura de la pantalla (h) para calcular el ciclo de repetición.
+          if (backgroundOffset >= h * 3) {
+            backgroundOffset -= h * 2;
           }
         } else {
-          final screenW = MediaQuery.of(context).size.width;
-          // Para horizontal: resetear cada 2 anchos de screen
-          if (backgroundOffset >= screenW * 3) {
-            backgroundOffset -= screenW * 2;
+          // Lógica para horizontal (que ya usaba el ancho de pantalla)
+          if (backgroundOffset >= w * 3) {
+            backgroundOffset -= w * 2;
           }
         }
 
@@ -232,6 +237,12 @@ class _GamePageState extends State<GamePage> {
             .map((p) => Offset(p.dx, p.dy + backgroundSpeed * 0.8))
             .where((p) => p.dy < h + 50)
             .toList();
+            
+          snakes = snakes 
+            .map((s) => Offset(s.dx, s.dy + backgroundSpeed * 0.8))
+            .where((s) => s.dy < h + 50)
+            .toList();
+            
         } else {
           // horizontal: move objects left as background scrolls right->left
           coins = coins
@@ -243,37 +254,32 @@ class _GamePageState extends State<GamePage> {
             .map((p) => Offset(p.dx - backgroundSpeed * 0.8, p.dy))
             .where((p) => p.dx > -50)
             .toList();
+            
+          snakes = snakes 
+            .map((s) => Offset(s.dx - backgroundSpeed * 0.8, s.dy))
+            .where((s) => s.dx > -50)
+            .toList();
         }
 
-        // La verificación de colisión sigue aquí, sincronizada con el juego.
         _checkCollision(); 
       });
     });
   }
 
-  // RECT DEL AUTO - IMPLEMENTACIÓN SIN CAMBIOS, usa la nueva carX
+  // RECT DEL AUTO
   Rect _carRect() {
     final screenW = MediaQuery.of(context).size.width;
     final screenH = MediaQuery.of(context).size.height;
 
-    // El padding inferior de SafeArea (usado para la parte segura del teléfono)
     final bottomPadding = MediaQuery.of(context).padding.bottom; 
 
     if (orientation == GameOrientation.vertical) {
-      // Cálculo de la posición X del borde izquierdo (Left)
       final left = (screenW / 2) + carX - (carWidth / 2);
-
-      // Cálculo de la posición Y del borde superior (Top)
       final top = screenH - _carVerticalOffset - carHeight - bottomPadding;
-
       return Rect.fromLTWH(left, top, carWidth, carHeight);
     } else {
-          // Horizontal: el carro se mueve en el eje Y and is rendered inside a
-          // left-aligned area with a left padding of 20 and a SizedBox width of
-          // `screenW * 0.5`. Compute the left coordinate so the collision rect
-          // matches the visual position of the widget.
-          const double horizontalLeftPadding = 20.0;
-          final left = horizontalLeftPadding;
+      const double horizontalLeftPadding = 20.0;
+      final left = horizontalLeftPadding;
       final top = (screenH / 2) + carY - (carHeight / 2);
       return Rect.fromLTWH(left, top, carWidth, carHeight);
     }
@@ -281,16 +287,15 @@ class _GamePageState extends State<GamePage> {
 
   void _checkCollision() {
     final car = _carRect();
-    // Reduce hitbox slightly so collisions happen a bit later (less false/early hits)
     const double collisionPadding = 8.0;
     final carHit = car.deflate(collisionPadding);
     bool scoreChanged = false;
+    bool gasolineChanged = false;
 
     // Colisión con Monedas
     coins.removeWhere((c) {
       final r = Rect.fromLTWH(c.dx, c.dy, coinSize, coinSize).deflate(4.0);
       if (carHit.overlaps(r)) {
-        // Monedas incrementan solo la puntuación
         score += 10;
         scoreChanged = true;
         return true;
@@ -302,17 +307,34 @@ class _GamePageState extends State<GamePage> {
     pacas.removeWhere((p) {
       final r = Rect.fromLTWH(p.dx, p.dy, pacaSizeLocal, pacaSizeLocal).deflate(6.0);
       if (carHit.overlaps(r)) {
-        // Pacas aumentan la gasolina (reabastecimiento)
         gasoline = min(100, gasoline + 30);
-        scoreChanged = true;
+        gasolineChanged = true;
         return true;
       }
       return false;
     });
     
-    // LLAMADA PARA REVISAR EL NIVEL si la puntuación cambió
+    // --- COLISIÓN CON SERPIENTES (Obstáculo que quita gasolina) ---
+    snakes.removeWhere((s) {
+      final r = Rect.fromLTWH(s.dx, s.dy, snakeSizeLocal, snakeSizeLocal).deflate(6.0);
+      if (carHit.overlaps(r)) {
+        gasoline = max(0, gasoline - _snakeGasolinePenalty);
+        gasolineChanged = true;
+        // No incrementa la puntuación
+        return true;
+      }
+      return false;
+    });
+    // -----------------------------------------------------------------
+    
+    // LLAMADA PARA REVISAR EL NIVEL
     if (scoreChanged) {
       _updateLevel();
+    }
+    
+    // Forzar la actualización del estado si algo cambió
+    if (scoreChanged || gasolineChanged) {
+      setState(() {});
     }
   }
 
@@ -326,7 +348,6 @@ class _GamePageState extends State<GamePage> {
   Widget _buildGameOverOverlay() {
     return Positioned.fill(
       child: Container(
-        // Fondo más oscuro para asegurar visibilidad
         color: Colors.black87, 
         child: Center(
           child: Container(
@@ -335,7 +356,6 @@ class _GamePageState extends State<GamePage> {
               color: Colors.white,
               borderRadius: BorderRadius.circular(15),
               boxShadow: const [
-                // Sombra más visible
                 BoxShadow(blurRadius: 15, color: Colors.black, offset: Offset(0, 8)) 
               ],
             ),
@@ -355,16 +375,13 @@ class _GamePageState extends State<GamePage> {
                   "Puntuación Final: $score",
                   style: const TextStyle(fontSize: 24, color: Colors.black87),
                 ),
-                // * Muestra el nivel final *
                 Text(
                   "Nivel Alcanzado: $currentLevel",
                   style: const TextStyle(fontSize: 24, color: Colors.blueAccent),
                 ),
                 const SizedBox(height: 30),
-                // Botón de salir (cierra la página o navega hacia atrás)
                 ElevatedButton.icon(
                   onPressed: () {
-                    // Cierra la página de juego y regresa a la pantalla anterior
                     Navigator.pop(context); 
                   },
                   icon: const Icon(Icons.exit_to_app),
@@ -397,10 +414,7 @@ class _GamePageState extends State<GamePage> {
                 final screenW = MediaQuery.of(context).size.width;
                 final screenH = MediaQuery.of(context).size.height;
                 if (orientation == GameOrientation.vertical) {
-                  // Tile the background using the actual screen height so there
-                  // are no sudden gaps. We compute a base Y that moves as
-                  // backgroundOffset increases and then draw 3 tiles to cover
-                  // the viewport.
+                  // backgroundOffset % screenH asegura que el desplazamiento se sincronice con la altura de la pantalla
                   final baseY = (backgroundOffset % screenH) - screenH;
                   return Stack(
                     children: List.generate(3, (i) {
@@ -415,7 +429,6 @@ class _GamePageState extends State<GamePage> {
                     }),
                   );
                 } else {
-                  // Horizontal scrolling: use screen width to tile horizontally.
                   final baseX = -(backgroundOffset % screenW);
                   return Stack(
                     children: List.generate(3, (i) {
@@ -440,29 +453,34 @@ class _GamePageState extends State<GamePage> {
               }),
             ),
 
-            // OBJETOS (Monedas y Pacas)
+            // OBJETOS (Monedas, Pacas y Serpientes)
             ...coins.map((c) => Positioned(
-                  left: c.dx,
-                  top: c.dy,
-                  child: Image.asset("assets/coin.png", width: coinSize),
-                )),
+                left: c.dx,
+                top: c.dy,
+                child: Image.asset("assets/coin.png", width: coinSize),
+              )),
             ...pacas.map((p) => Positioned(
-                  left: p.dx,
-                  top: p.dy,
-                  // Usa tamaño adaptativo
-                  child: Image.asset("assets/paca.png", width: pacaSizeLocal),
-                )),
+                left: p.dx,
+                top: p.dy,
+                child: Image.asset("assets/paca.png", width: pacaSizeLocal),
+              )),
+            ...snakes.map((s) => Positioned(
+                left: s.dx,
+                top: s.dy,
+                child: Image.asset("assets/snake.png", width: snakeSizeLocal),
+              )),
+            
 
-            // OBJETOS DEL JUEGO se renderizan antes de la UI
-
-            // Draw the DraggableCar (below the HUD) so the HUD overlays on top.
+            // Draw the DraggableCar
+            // CORRECCIÓN: Usando la sintaxis 'if (condition) Widget else Widget' que devuelve un solo Widget.
             if (orientation == GameOrientation.vertical)
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: _carVerticalOffset),
                   child: DraggableCar(
-                    imagePath: SettingsService.getCarAsset(SettingsService.selectedCarIndex, SettingsService.orientation),
+                    // Aquí, 'orientation' es ahora el tipo GameOrientation de SettingsService.
+                    imagePath: SettingsService.getCarAsset(SettingsService.selectedCarIndex, orientation),
                     width: carWidth,
                     height: carHeight,
                     verticalMovement: false,
@@ -490,7 +508,8 @@ class _GamePageState extends State<GamePage> {
                     width: MediaQuery.of(context).size.width * 0.5,
                     height: MediaQuery.of(context).size.height,
                     child: DraggableCar(
-                      imagePath: SettingsService.getCarAsset(SettingsService.selectedCarIndex, SettingsService.orientation),
+                      // Aquí, 'orientation' es ahora el tipo GameOrientation de SettingsService.
+                      imagePath: SettingsService.getCarAsset(SettingsService.selectedCarIndex, orientation),
                       width: carWidth,
                       height: carHeight,
                       verticalMovement: true,
@@ -516,7 +535,7 @@ class _GamePageState extends State<GamePage> {
               top: 20,
               left: 20,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start, // Mejor alineación
+                crossAxisAlignment: CrossAxisAlignment.start, 
                 children: [
                   Text(
                     "Score: $score",
@@ -525,7 +544,6 @@ class _GamePageState extends State<GamePage> {
                         fontSize: 22,
                         fontWeight: FontWeight.bold),
                   ),
-                  // * Muestra el nivel actual *
                   Text(
                     "Nivel: $currentLevel",
                     style: const TextStyle(
@@ -537,14 +555,14 @@ class _GamePageState extends State<GamePage> {
                   Container(
                     width: 200,
                     height: 20,
-                    decoration: BoxDecoration( // Agregué decoración para visibilidad
+                    decoration: BoxDecoration( 
                       color: Colors.grey[800],
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: ClipRRect( // Recorta la barra de color
+                    child: ClipRRect( 
                       borderRadius: BorderRadius.circular(10),
                       child: FractionallySizedBox(
-                        alignment: Alignment.centerLeft, // Asegura que crezca de izquierda a derecha
+                        alignment: Alignment.centerLeft, 
                         widthFactor: gasoline / 100,
                         child: Container(color: gasoline > 20 ? Colors.green : Colors.red),
                       ),
@@ -560,7 +578,6 @@ class _GamePageState extends State<GamePage> {
               child: IconButton(
                 icon: const Icon(Icons.pause_circle_filled, size: 36, color: Colors.white),
                 onPressed: () async {
-                  // Pause game and show confirmation
                   _pauseGame();
                   final wantExit = await showDialog<bool>(
                     context: context,
@@ -583,17 +600,15 @@ class _GamePageState extends State<GamePage> {
 
                   if (!mounted) return;
                   if (wantExit == true) {
-                    // No guardar la puntuación al salir desde pausa
                     Navigator.of(context).pop();
                   } else {
-                    // Reanudar
                     _resumeGame();
                   }
                 },
               ),
             ),
             
-            // GAME OVER CONDICIONAL: Debe ir al final para superponerse a todo
+            // GAME OVER CONDICIONAL
             if (isGameOver) _buildGameOverOverlay(),
           ],
         ),
