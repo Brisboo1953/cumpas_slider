@@ -119,8 +119,8 @@ class _MainMenuPageState extends State<MainMenuPage> {
                       // Play button, slightly larger
                       CustomMenuButton(
                         buttonName: 'play',
-                        width: 150,
-                        height: 150,
+                        width: 120,
+                        height: 120,
                         scale: 1.0,
                         onTap: () async {
                           final name = await showDialog<String?>(

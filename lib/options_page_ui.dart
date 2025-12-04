@@ -9,10 +9,11 @@ class NewOptionsPage extends StatefulWidget {
   State<NewOptionsPage> createState() => _NewOptionsPageState();
 }
 
-class _NewOptionsPageState extends State<NewOptionsPage> {
+class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStateMixin {
   GameOrientation _orientation = SettingsService.orientation;
   int _selectedCar = SettingsService.selectedCarIndex;
   int _selectedScene = SettingsService.selectedSceneIndex;
+  late AnimationController _fadeController;
 
   void _onOrientationChanged(GameOrientation? value) {
     if (value == null) return;
@@ -37,21 +38,51 @@ class _NewOptionsPageState extends State<NewOptionsPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Opciones")),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text(
+          'OPCIONES',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, letterSpacing: 3,color: Colors.white),
+        ),
+        centerTitle: true,
+        backgroundColor: const Color.fromARGB(23, 181, 78, 241),
+        elevation: 0,
+      ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF0F2027), Color(0xFF203A43), Color(0xFF2C5364)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
+            colors: [
+              Color.fromARGB(255, 73, 182, 255),
+              Color.fromARGB(255, 0, 153, 255),
+              Color.fromARGB(202, 41, 0, 58),
+            ],
           ),
         ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
+        child: FadeTransition(
+          opacity: _fadeController,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 100, 16, 16),
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
@@ -280,6 +311,6 @@ class _NewOptionsPageState extends State<NewOptionsPage> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

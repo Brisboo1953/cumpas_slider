@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'widgets/draggable_car.dart'; 
 import 'services/settings_service.dart';
 import 'services/supabase_service.dart';
+import 'services/sfx_service.dart';
 
 // Definiciones de constantes para objetos
 const double _coinSize = 40.0;
@@ -297,6 +298,10 @@ class _GamePageState extends State<GamePage> {
       final r = Rect.fromLTWH(c.dx, c.dy, coinSize, coinSize).deflate(4.0);
       if (carHit.overlaps(r)) {
         score += 10;
+        // Reproducir efecto de sonido al recoger moneda
+        try {
+          SfxService.playCoin();
+        } catch (_) {}
         scoreChanged = true;
         return true;
       }

@@ -77,7 +77,9 @@ flutter:
     - assets/escenarios/
     - assets/coin.png
     - assets/paca.png
+    - assets/menu_music.mp3
     - assets/moro.mp3
+    - assets/coin_sfx.mp3
     - assets/ui/buttons/
     - assets/snake.png
     # Imagen de fondo del menú principal (añade el archivo en assets/images/)
