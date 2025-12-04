@@ -123,7 +123,7 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                               Expanded(
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(foregroundColor: Colors.white,
-                                    backgroundColor: _orientation == GameOrientation.horizontal ? const Color.fromARGB(255, 15, 172, 75) : const Color.fromARGB(149, 15, 172, 75)
+                                    backgroundColor: _orientation == GameOrientation.horizontal ? const Color.fromARGB(255, 15, 172, 75) :  Color.fromARGB(255, 15, 172, 75)
                                   ),
                                   onPressed: () => _onOrientationChanged(GameOrientation.horizontal),
                                   child: const Text('Horizontal'),
@@ -323,7 +323,7 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                               Expanded(
                                 child: ElevatedButton(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color.fromARGB(149, 15, 172, 75),
+                                    backgroundColor:  Color.fromARGB(255, 15, 172, 75),
                                     foregroundColor: Colors.white,
                                   ),
                                   onPressed: () async {
@@ -340,7 +340,7 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text('Configuración restablecida'),
-                                        backgroundColor: const Color.fromARGB(255, 15, 172, 75),
+                                        backgroundColor:  Color.fromARGB(255, 15, 172, 75),
                                       )
                                     );
                                   },

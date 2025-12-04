@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+ import 'package:flutter/foundation.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 class MusicService {
@@ -85,4 +85,4 @@ class MusicService {
       await setVolume(previous);
     } catch (_) {}
   }
-}
+}                                 

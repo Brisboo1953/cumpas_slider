@@ -91,6 +91,12 @@ flutter:
     
     # Imagen de fondo del menú principal (añade el archivo en assets/images/)
     - assets/images/menu_start.jpg
+    - assets/ui/buttons/music_normal.png
+    - assets/ui/buttons/music_hover.png
+    - assets/ui/buttons/music_off.png
+    - assets/ui/buttons/sfx_normal.png
+    - assets/ui/buttons/sfx_hover.png
+    - assets/ui/buttons/sfx_off.png
     - assets/icon/icon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
