@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
-// * IMPORTACIÓN CORREGIDA para la estructura lib/widgets/draggable_car.dart *
 import 'widgets/draggable_car.dart'; 
 import 'services/settings_service.dart';
 import 'services/supabase_service.dart';
@@ -10,15 +9,10 @@ import 'services/sfx_service.dart';
 // Definiciones de constantes para objetos
 const double _coinSize = 40.0;
 const double _pacaSize = 80.0; 
-// --- CONSTANTES DE SERPIENTE ACTUALIZADAS ---
 const double _snakeSize = 60.0; 
 const double _snakeGasolinePenalty = 20.0; 
-// ------------------------------------------
 const double _carVerticalOffset = 20.0; 
 const double _BACKGROUND_HEIGHT = 600.0; 
-
-// ELIMINADA la definición local de 'GameOrientation' para evitar conflictos de tipo.
-// Ahora se asume que GameOrientation se obtiene de 'settings_service.dart'.
 
 class GamePage extends StatefulWidget {
   final String? playerName;
@@ -49,6 +43,7 @@ class _GamePageState extends State<GamePage> {
   int score = 0;
   double gasoline = 100;
   bool isGameOver = false;
+  bool isPaused = false; // Nuevo estado para pausa
 
   // Temporizadores
   Timer? objectTimer;
@@ -119,6 +114,9 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _pauseGame() {
+    setState(() {
+      isPaused = true;
+    });
     moveTimer?.cancel();
     objectTimer?.cancel();
     gasolineTimer?.cancel();
@@ -128,6 +126,9 @@ class _GamePageState extends State<GamePage> {
   }
 
   void _resumeGame() {
+    setState(() {
+      isPaused = false;
+    });
     if (moveTimer == null || !(moveTimer?.isActive ?? false)) _startMovement();
     if (objectTimer == null || !(objectTimer?.isActive ?? false)) _startObjects();
     if (gasolineTimer == null || !(gasolineTimer?.isActive ?? false)) _startGasoline();
@@ -205,7 +206,7 @@ class _GamePageState extends State<GamePage> {
     }
   }
   
-  // --- FUNCIÓN PARA GENERAR SERPIENTES ---
+  // FUNCIÓN PARA GENERAR SERPIENTES
   void _spawnSnake(int count) {
     final random = Random();
     final w = MediaQuery.of(context).size.width;
@@ -218,12 +219,11 @@ class _GamePageState extends State<GamePage> {
       }
     }
   }
-  // --------------------------------------
 
   // MUEVE OBJETOS Y FONDO
   void _startMovement() {
     moveTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
-      if (isGameOver) return; 
+      if (isGameOver || isPaused) return; 
 
       final h = MediaQuery.of(context).size.height;
       final w = MediaQuery.of(context).size.width;
@@ -341,7 +341,7 @@ class _GamePageState extends State<GamePage> {
       return false;
     });
     
-    // --- COLISIÓN CON SERPIENTES (Obstáculo que quita gasolina) ---
+    // COLISIÓN CON SERPIENTES (Obstáculo que quita gasolina)
     snakes.removeWhere((s) {
       final r = Rect.fromLTWH(s.dx, s.dy, snakeSizeLocal, snakeSizeLocal).deflate(6.0);
       if (carHit.overlaps(r)) {
@@ -356,7 +356,6 @@ class _GamePageState extends State<GamePage> {
       }
       return false;
     });
-    // -----------------------------------------------------------------
     
     // LLAMADA PARA REVISAR EL NIVEL
     if (scoreChanged) {
@@ -432,6 +431,122 @@ class _GamePageState extends State<GamePage> {
     );
   }
 
+  // WIDGET: Ventana de Pausa
+  Widget _buildPauseOverlay() {
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black54,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(30),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: const [
+                BoxShadow(blurRadius: 15, color: Colors.black, offset: Offset(0, 8))
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Juego en Pausa",
+                  style: TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(height: 30),
+                Text(
+                  "Puntuación Actual: $score",
+                  style: const TextStyle(fontSize: 24, color: Colors.black87),
+                ),
+                Text(
+                  "Nivel Actual: $currentLevel",
+                  style: const TextStyle(fontSize: 24, color: Colors.blueAccent),
+                ),
+                const SizedBox(height: 30),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        _resumeGame();
+                      },
+                      icon: const Icon(Icons.play_arrow),
+                      label: const Text("Continuar", style: TextStyle(fontSize: 20)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final wantExit = await showDialog<bool>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (ctx) => AlertDialog(
+                            title: const Text('¿Salir?'),
+                            content: const Text('¿Seguro que deseas salir? Perderás tu progreso.'),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(false),
+                                child: const Text('Continuar'),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.of(ctx).pop(true),
+                                child: const Text('Salir', style: TextStyle(color: Colors.red)),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (!mounted) return;
+                        if (wantExit == true) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      icon: const Icon(Icons.exit_to_app),
+                      label: const Text("Salir", style: TextStyle(fontSize: 20)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Widget personalizado para el botón de pausa
+  Widget _buildPauseButton() {
+    return Positioned(
+      top: 12,
+      right: 12,
+      child: _PauseButton(
+        onTap: () {
+          if (isGameOver) return;
+          if (isPaused) {
+            _resumeGame();
+          } else {
+            _pauseGame();
+          }
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -503,26 +618,24 @@ class _GamePageState extends State<GamePage> {
             
 
             // Draw the DraggableCar
-            // CORRECCIÓN: Usando la sintaxis 'if (condition) Widget else Widget' que devuelve un solo Widget.
             if (orientation == GameOrientation.vertical)
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: _carVerticalOffset),
                   child: DraggableCar(
-                    // Aquí, 'orientation' es ahora el tipo GameOrientation de SettingsService.
                     imagePath: SettingsService.getCarAsset(SettingsService.selectedCarIndex, orientation),
                     width: carWidth,
                     height: carHeight,
                     verticalMovement: false,
                     onXPositionChanged: (newX) {
-                      if (isGameOver) return;
+                      if (isGameOver || isPaused) return;
                       setState(() {
                         carX = newX;
                       });
                     },
                     onYPositionChanged: (newY) {
-                      if (isGameOver) return;
+                      if (isGameOver || isPaused) return;
                       setState(() {
                         carY = newY;
                       });
@@ -539,19 +652,18 @@ class _GamePageState extends State<GamePage> {
                     width: MediaQuery.of(context).size.width * 0.5,
                     height: MediaQuery.of(context).size.height,
                     child: DraggableCar(
-                      // Aquí, 'orientation' es ahora el tipo GameOrientation de SettingsService.
                       imagePath: SettingsService.getCarAsset(SettingsService.selectedCarIndex, orientation),
                       width: carWidth,
                       height: carHeight,
                       verticalMovement: true,
                       onXPositionChanged: (newX) {
-                        if (isGameOver) return;
+                        if (isGameOver || isPaused) return;
                         setState(() {
                           carX = newX;
                         });
                       },
                       onYPositionChanged: (newY) {
-                        if (isGameOver) return;
+                        if (isGameOver || isPaused) return;
                         setState(() {
                           carY = newY;
                         });
@@ -602,46 +714,51 @@ class _GamePageState extends State<GamePage> {
                 ],
               ),
             ),
-            // PAUSE BUTTON (top-right)
-            Positioned(
-              top: 12,
-              right: 12,
-              child: IconButton(
-                icon: const Icon(Icons.pause_circle_filled, size: 36, color: Colors.white),
-                onPressed: () async {
-                  _pauseGame();
-                  final wantExit = await showDialog<bool>(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('¿Salir?'),
-                      content: const Text('¿Seguro que deseas salir? Perderás tu progreso.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('Continuar'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(true),
-                          child: const Text('Salir', style: TextStyle(color: Colors.red)),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (!mounted) return;
-                  if (wantExit == true) {
-                    Navigator.of(context).pop();
-                  } else {
-                    _resumeGame();
-                  }
-                },
-              ),
-            ),
+            
+            // BOTÓN DE PAUSA PERSONALIZADO
+            _buildPauseButton(),
+            
+            // OVERLAY DE PAUSA (si el juego está pausado)
+            if (isPaused && !isGameOver) _buildPauseOverlay(),
             
             // GAME OVER CONDICIONAL
             if (isGameOver) _buildGameOverOverlay(),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// Widget personalizado para el botón de pausa
+class _PauseButton extends StatefulWidget {
+  final VoidCallback onTap;
+  
+  const _PauseButton({required this.onTap});
+
+  @override
+  State<_PauseButton> createState() => __PauseButtonState();
+}
+
+class __PauseButtonState extends State<_PauseButton> {
+  bool _isHovering = false;
+
+  String get _assetPath =>
+      'assets/ui/buttons/pause_${_isHovering ? 'hover' : 'normal'}.png';
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.translucent,
+        child: Image.asset(
+          _assetPath,
+          width: 70,
+          height: 70,
+          fit: BoxFit.contain,
         ),
       ),
     );

@@ -77,6 +77,8 @@ flutter:
     - assets/escenarios/
     - assets/coin.png
     - assets/paca.png
+    - assets/snake.png
+
     # Sound assets
     - assets/sounds/menu_music.mp3
     - assets/sounds/moro.mp3
@@ -86,9 +88,8 @@ flutter:
     - assets/sounds/horse-neigh.mp3
     - assets/sounds/shaken-bush.mp3
     - assets/ui/buttons/
-    - assets/snake.png
+    
     # Imagen de fondo del menú principal (añade el archivo en assets/images/)
-    - assets/images/menu_bg.png
     - assets/images/menu_start.jpg
     - assets/icon/icon.png
 
