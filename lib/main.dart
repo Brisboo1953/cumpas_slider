@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -64,6 +65,8 @@ class MainMenuPage extends StatefulWidget {
 
 class _MainMenuPageState extends State<MainMenuPage> {
   bool _isMusicPlaying = false;
+  bool _isMusicHovering = false;
+  bool _isTitleHovering = false;
 
   @override
   void initState() {
@@ -83,9 +86,12 @@ class _MainMenuPageState extends State<MainMenuPage> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
-              'assets/images/menu_start.jpg',
-              fit: BoxFit.cover,
+            child: ImageFiltered(
+              imageFilter: ui.ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+              child: Image.asset(
+                'assets/images/menu_start.jpg',
+                fit: BoxFit.cover,
+              ),
             ),
           ),
 
@@ -94,13 +100,29 @@ class _MainMenuPageState extends State<MainMenuPage> {
           ),
 
           Align(
-            alignment: const Alignment(0, -0.80),
-            child: const Text(
-              "CUMPAS SLIDE GAME",
-              style: TextStyle(
-                fontSize: 40,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+            alignment: const Alignment(0, -0.90),
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isTitleHovering = true),
+              onExit: (_) => setState(() => _isTitleHovering = false),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.6, end: _isTitleHovering ? 0.66 : 0.6),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                builder: (context, scale, child) {
+                  return Transform.scale(
+                    scale: scale,
+                    child: AnimatedOpacity(
+                      opacity: _isTitleHovering ? 0.98 : 1.0,
+                      duration: const Duration(milliseconds: 180),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Image.asset(
+                  'assets/images/menu_title.png',
+                  width: MediaQuery.of(context).size.width * 0.6,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
           ),
@@ -123,39 +145,49 @@ class _MainMenuPageState extends State<MainMenuPage> {
                         height: 120,
                         scale: 1.0,
                         onTap: () async {
-                          final name = await showDialog<String?>(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (ctx) {
-                              String input = '';
-                              return AlertDialog(
-                                title: const Text('Ingresa tu nombre'),
-                                content: TextField(
-                                  autofocus: true,
-                                  decoration: const InputDecoration(hintText: 'Nombre'),
-                                  onChanged: (v) => input = v,
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.of(ctx).pop(null),
-                                    child: const Text('Cancelar'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.of(ctx).pop(input),
-                                    child: const Text('Aceptar'),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
+                          // If we already have a stored player name, use it.
+                          String? stored = SettingsService.playerName;
+                          String? name = stored;
 
-                          if (name == null || name.trim().isEmpty) return;
-                          if (!mounted) return;
+                          if (stored == null || stored.trim().isEmpty) {
+                            // Ask for name and persist it for the session (and across launches)
+                            final entered = await showDialog<String?>(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (ctx) {
+                                String input = '';
+                                return AlertDialog(
+                                  title: const Text('Ingresa tu nombre'),
+                                  content: TextField(
+                                    autofocus: true,
+                                    decoration: const InputDecoration(hintText: 'Nombre'),
+                                    onChanged: (v) => input = v,
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(null),
+                                      child: const Text('Cancelar'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(input),
+                                      child: const Text('Aceptar'),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            if (entered == null || entered.trim().isEmpty) return;
+                            name = entered.trim();
+                            await SettingsService.setPlayerName(name);
+                          }
+
+                          if (!mounted || name == null || name.trim().isEmpty) return;
 
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => GamePage(playerName: name.trim()),
+                              builder: (_) => GamePage(playerName: name!.trim()),
                             ),
                           );
                         },
@@ -214,23 +246,35 @@ class _MainMenuPageState extends State<MainMenuPage> {
             ),
           ),
 
+          // Music toggle button (uses image assets). Positioned top-right, same size as other corner buttons.
           Positioned(
-            right: 12,
-            top: 12,
-            child: IconButton(
-              icon: Icon(
-                _isMusicPlaying ? Icons.volume_up : Icons.volume_off,
-                color: Colors.white,
+            right: 16,
+            top: 16,
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isMusicHovering = true),
+              onExit: (_) => setState(() => _isMusicHovering = false),
+              child: GestureDetector(
+                onTap: () async {
+                  if (_isMusicPlaying) {
+                    await MusicService.stop();
+                    setState(() => _isMusicPlaying = false);
+                  } else {
+                    await MusicService.playMenu();
+                    setState(() => _isMusicPlaying = true);
+                  }
+                },
+                child: Image.asset(
+                  // choose asset based on hover and play state
+                  _isMusicHovering
+                      ? 'assets/ui/buttons/music_hover.png'
+                      : (_isMusicPlaying
+                          ? 'assets/ui/buttons/music_normal.png'
+                          : 'assets/ui/buttons/music_off.png'),
+                  width: 90,
+                  height: 90,
+                  fit: BoxFit.contain,
+                ),
               ),
-              onPressed: () async {
-                if (_isMusicPlaying) {
-                  await MusicService.stop();
-                  setState(() => _isMusicPlaying = false);
-                } else {
-                  await MusicService.playMenu();
-                  setState(() => _isMusicPlaying = true);
-                }
-              },
             ),
           ),
         ],

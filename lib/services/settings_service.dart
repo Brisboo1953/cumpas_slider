@@ -10,6 +10,8 @@ class SettingsService {
   // Índices seleccionados
   static int selectedCarIndex = 0;
   static int selectedSceneIndex = 0;
+  // Nombre del jugador (persistido en SharedPreferences)
+  static String? playerName;
 
   // Rutas a assets disponibles (ajusta aquí si añades más)
   static const List<String> availableCars = [
@@ -61,6 +63,7 @@ class SettingsService {
       orientation = GameOrientation.values[prefs.getInt('orientation') ?? orientation.index];
       selectedCarIndex = prefs.getInt('selectedCarIndex') ?? selectedCarIndex;
       selectedSceneIndex = prefs.getInt('selectedSceneIndex') ?? selectedSceneIndex;
+      playerName = prefs.getString('playerName');
       if (kDebugMode) {
         debugPrint('SettingsService.init: orientation=$orientation, car=$selectedCarIndex, scene=$selectedSceneIndex');
       }
@@ -76,9 +79,21 @@ class SettingsService {
       await prefs.setInt('orientation', orientation.index);
       await prefs.setInt('selectedCarIndex', selectedCarIndex);
       await prefs.setInt('selectedSceneIndex', selectedSceneIndex);
+      if (playerName == null) {
+        await prefs.remove('playerName');
+      } else {
+        await prefs.setString('playerName', playerName!);
+      }
       if (kDebugMode) debugPrint('SettingsService.save: saved');
     } catch (e) {
       if (kDebugMode) debugPrint('SettingsService.save error: $e');
     }
+  }
+
+  /// Actualiza el nombre del jugador en memoria y lo persiste.
+  static Future<void> setPlayerName(String? name) async {
+    playerName = (name == null || name.trim().isEmpty) ? null : name.trim();
+    await save();
+    if (kDebugMode) debugPrint('SettingsService: playerName set to $playerName');
   }
 }

@@ -147,18 +147,21 @@ class SupabaseService {
     required int points,
   }) async {
     try {
-      final updatedData = {
-        'player_name': playerName,
-        'points': points,
-        'updated_at': DateTime.now().toIso8601String(),
-      };
-
-      await _client
-          .from('players')
-          .update(updatedData)
-          .eq('player_name', playerName);
-
-      debugPrint('✅ Jugador con nombre $playerName actualizado exitosamente.');
+      final normalized = playerName.trim();
+      // Buscamos case-insensitive la fila existente y actualizamos por id
+      final resp = await _client.from('players').select('id, player_name').filter('player_name', 'ilike', normalized).limit(1);
+      if (resp.isNotEmpty) {
+        final id = resp.first['id'];
+        final updatedData = {
+          'player_name': normalized,
+          'points': points,
+          'updated_at': DateTime.now().toIso8601String(),
+        };
+        await _client.from('players').update(updatedData).eq('id', id);
+        debugPrint('✅ Jugador con id $id actualizado exitosamente.');
+      } else {
+        debugPrint('⚠️ No se encontró jugador para actualizar con nombre (ilike) $normalized');
+      }
     } on PostgrestException catch (error) {
       debugPrint('❌ Error al actualizar jugador: ${error.message}');
     } catch (error) {
@@ -183,29 +186,38 @@ class SupabaseService {
         user = _client.auth.currentUser;
       }
       final uid = user?.id;
+      // Normalize player name to avoid duplicates by extra spaces
+      final normalized = playerName.trim();
 
       final row = {
-        'player_name': playerName,
+        'player_name': normalized,
         'points': score,
         if (uid != null) 'user_id': uid,
         'updated_at': DateTime.now().toIso8601String(),
       };
 
       try {
-        // Preferimos usar el método upsert nativo si está disponible en el cliente
-        await _client.from('players').upsert(row);
-        debugPrint('✅ Upsert realizado para $playerName -> $score');
+        // Intentamos usar upsert indicando la columna de conflicto 'player_name'.
+        // Esto requiere que exista una constraint UNIQUE en la columna player_name
+        // en la base de datos (recomendado). Si la constraint no existe, upsert
+        // puede comportarse como un insert.
+        await _client.from('players').upsert(row, onConflict: 'player_name');
+        debugPrint('✅ Upsert realizado para $normalized -> $score');
         return;
       } catch (e) {
-        // Si no está disponible o falla, hacemos fallback a select+update/insert
+        // Si upsert falla por cualquier motivo, caemos al fallback select+update/insert
         debugPrint('⚠️ Upsert nativo falló o no disponible, usando fallback: $e');
       }
 
       // FALLBACK: comprobar existencia y hacer update o insert
-      final response = await _client.from('players').select('id, player_name, points').eq('player_name', playerName).limit(1);
+      // Fallback: buscamos coincidencias por nombre exacto (ya normalizamos antes)
+      final response = await _client.from('players').select('id, player_name, points').filter('player_name', 'ilike', normalized).limit(1);
       if (response.isNotEmpty) {
-        debugPrint('Jugador $playerName encontrado en fallback. Actualizando...');
-        await updatePlayer(playerName: playerName, points: score);
+        final found = response.first;
+        final foundId = found['id'];
+        debugPrint('Jugador ${found['player_name']} (id $foundId) encontrado en fallback. Actualizando...');
+        // Actualizamos por id para evitar afectar posibles duplicados
+        await _client.from('players').update({'points': score, 'updated_at': DateTime.now().toIso8601String()}).eq('id', foundId);
       } else {
         debugPrint('Jugador $playerName no encontrado en fallback. Insertando...');
         await insertPlayer(playerName: playerName, points: score, userId: uid);
@@ -225,19 +237,15 @@ class SupabaseService {
   /// - [playerName]: Nombre del jugador a buscar.
   Future<int?> retrievePoints({required String playerName}) async {
     try {
-      final response = await _client
-          .from('players')
-          .select('points')
-          .eq('player_name', playerName)
-          .limit(1);
-
+      final normalized = playerName.trim();
+      final response = await _client.from('players').select('points').filter('player_name', 'ilike', normalized).limit(1);
       if (response.isNotEmpty) {
         final playerData = response.first;
         final points = playerData['points'] as int;
         debugPrint('✅ Puntos recuperados para $playerName: $points');
         return points;
       } else {
-        debugPrint('⚠️ Jugador $playerName no encontrado.');
+        debugPrint('⚠️ Jugador $playerName no encontrado (ilike).');
         return null;
       }
     } catch (error) {
@@ -263,6 +271,18 @@ class SupabaseService {
 
     try {
       final uid = _client.auth.currentUser?.id;
+      final normalized = name.trim();
+
+      // Primero intentamos encontrar case-insensitive si el jugador ya existe.
+      final found = await _client.from('players').select('id, player_name, points').filter('player_name', 'ilike', normalized).limit(1);
+      if (found.isNotEmpty) {
+        final id = found.first['id'];
+        await _client.from('players').update({'points': score, 'updated_at': DateTime.now().toIso8601String()}).eq('id', id);
+        debugPrint('✅ Score actualizado para id $id: $name -> $score');
+        return;
+      }
+
+      // Si no existe, insertamos (intentando upsert primero si existe constraint único)
       final row = {
         'player_name': name,
         'points': score,
@@ -270,7 +290,6 @@ class SupabaseService {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      // Intentamos usar upsert para evitar duplicados si existe constraint único
       try {
         await _client.from('players').upsert(row);
         debugPrint('✅ Score upserted: $name -> $score (user_id: $uid)');

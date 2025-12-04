@@ -1,7 +1,47 @@
 import 'package:flutter/material.dart';
+import 'services/settings_service.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  String? _playerName;
+
+  @override
+  void initState() {
+    super.initState();
+    _playerName = SettingsService.playerName;
+  }
+
+  Future<void> _editName() async {
+    final controller = TextEditingController(text: _playerName ?? '');
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Editar nombre de jugador'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(hintText: 'Nombre'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(ctx).pop(null), child: const Text('Cancelar')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(controller.text.trim()), child: const Text('Guardar')),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      await SettingsService.setPlayerName(result);
+      setState(() => _playerName = SettingsService.playerName);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nombre actualizado')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,9 +78,9 @@ class ProfilePage extends StatelessWidget {
                 Card(
                   color: Colors.white10,
                   child: ListTile(
-                    leading: const Icon(Icons.email, color: Colors.white),
-                    title: const Text('correo@ejemplo.com', style: TextStyle(color: Colors.white)),
-                    trailing: TextButton(onPressed: () {}, child: const Text('Editar')),
+                    leading: const Icon(Icons.person, color: Colors.white),
+                    title: Text(_playerName ?? 'Sin nombre', style: const TextStyle(color: Colors.white)),
+                    trailing: TextButton(onPressed: _editName, child: const Text('Editar')),
                   ),
                 ),
                 const SizedBox(height: 12),
