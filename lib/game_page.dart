@@ -73,15 +73,20 @@ class _GamePageState extends State<GamePage> {
     // Obteniendo la orientación desde SettingsService para inicializar el estado
     orientation = SettingsService.orientation;
     
+    // Detectar si el carro seleccionado es "moro" (índice 1)
+    final isMoroCar = SettingsService.selectedCarIndex == 1;
+    
     if (orientation == GameOrientation.horizontal) {
-      carWidth = 140;
-      carHeight = 50;
+      // Tamaños más grandes para el caballo moro en modo horizontal
+      carWidth = isMoroCar ? 220 : 140;
+      carHeight = isMoroCar ? 100 : 50;
       coinSize = 28.0;
       pacaSizeLocal = 60.0;
       snakeSizeLocal = 45.0; 
     } else {
-      carWidth = 100;
-      carHeight = 60;
+      // Tamaños más grandes para el caballo moro en modo vertical
+      carWidth = isMoroCar ? 160 : 100;
+      carHeight = isMoroCar ? 130 : 60;
       coinSize = _coinSize;
       pacaSizeLocal = _pacaSize;
       snakeSizeLocal = _snakeSize; 
@@ -90,6 +95,18 @@ class _GamePageState extends State<GamePage> {
     _startGasoline();
     _startObjects();
     _startMovement();
+
+    // Si el carro seleccionado es el orange_car (índice 0), reproducir sonido de arranque una vez
+    final isOrangeCar = SettingsService.selectedCarIndex == 0;
+    if (isOrangeCar) {
+      try {
+        SfxService.playCarEngine();
+      } catch (_) {}
+    } else if (isMoroCar) {
+      try {
+        SfxService.playHorseNeigh();
+      } catch (_) {}
+    }
   }
   
   void _stopGame() {
@@ -229,35 +246,36 @@ class _GamePageState extends State<GamePage> {
 
         // Mueve objetos según orientación
         if (orientation == GameOrientation.vertical) {
+          // Mover objetos con la misma velocidad del fondo para sincronía visual
           coins = coins
-            .map((c) => Offset(c.dx, c.dy + backgroundSpeed * 0.8))
+            .map((c) => Offset(c.dx, c.dy + backgroundSpeed))
             .where((c) => c.dy < h + 50)
             .toList();
 
           pacas = pacas
-            .map((p) => Offset(p.dx, p.dy + backgroundSpeed * 0.8))
+            .map((p) => Offset(p.dx, p.dy + backgroundSpeed))
             .where((p) => p.dy < h + 50)
             .toList();
             
           snakes = snakes 
-            .map((s) => Offset(s.dx, s.dy + backgroundSpeed * 0.8))
+            .map((s) => Offset(s.dx, s.dy + backgroundSpeed))
             .where((s) => s.dy < h + 50)
             .toList();
             
         } else {
           // horizontal: move objects left as background scrolls right->left
           coins = coins
-            .map((c) => Offset(c.dx - backgroundSpeed * 0.8, c.dy))
+            .map((c) => Offset(c.dx - backgroundSpeed, c.dy))
             .where((c) => c.dx > -50)
             .toList();
 
           pacas = pacas
-            .map((p) => Offset(p.dx - backgroundSpeed * 0.8, p.dy))
+            .map((p) => Offset(p.dx - backgroundSpeed, p.dy))
             .where((p) => p.dx > -50)
             .toList();
             
           snakes = snakes 
-            .map((s) => Offset(s.dx - backgroundSpeed * 0.8, s.dy))
+            .map((s) => Offset(s.dx - backgroundSpeed, s.dy))
             .where((s) => s.dx > -50)
             .toList();
         }
@@ -314,6 +332,10 @@ class _GamePageState extends State<GamePage> {
       if (carHit.overlaps(r)) {
         gasoline = min(100, gasoline + 30);
         gasolineChanged = true;
+        // Reproducir efecto de sonido al recoger paca
+        try {
+          SfxService.playPaca();
+        } catch (_) {}
         return true;
       }
       return false;
@@ -325,6 +347,10 @@ class _GamePageState extends State<GamePage> {
       if (carHit.overlaps(r)) {
         gasoline = max(0, gasoline - _snakeGasolinePenalty);
         gasolineChanged = true;
+        // Reproducir efecto de sonido al tocar serpiente
+        try {
+          SfxService.playSnakeHiss();
+        } catch (_) {}
         // No incrementa la puntuación
         return true;
       }
