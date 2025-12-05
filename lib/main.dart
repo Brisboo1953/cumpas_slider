@@ -9,6 +9,7 @@ import 'services/music_service.dart';
 import 'services/settings_service.dart';
 import 'scoreboard_page.dart';
 import 'widgets/custom_menu_button.dart';
+import 'services/sfx_controller.dart'; 
 import 'package:flutter/foundation.dart';
 
 
@@ -67,11 +68,14 @@ class MainMenuPage extends StatefulWidget {
 class _MainMenuPageState extends State<MainMenuPage> {
   bool _isMusicPlaying = false;
   bool _isMusicHovering = false;
+  bool _isSfxHovering = false;
   bool _isTitleHovering = false;
 
   @override
   void initState() {
     super.initState();
+    // Inicializa los SFX como activados por defecto
+    SfxController.setSfxEnabled(true);
   }
 
   @override
@@ -157,23 +161,113 @@ class _MainMenuPageState extends State<MainMenuPage> {
                               barrierDismissible: false,
                               builder: (ctx) {
                                 String input = '';
-                                return AlertDialog(
-                                  title: const Text('Ingresa tu nombre'),
-                                  content: TextField(
-                                    autofocus: true,
-                                    decoration: const InputDecoration(hintText: 'Nombre'),
-                                    onChanged: (v) => input = v,
+                                return Center(
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(30),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(15),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            blurRadius: 15,
+                                            color: Colors.black87,
+                                            offset: Offset(0, 8),
+                                          )
+                                        ],
+                                      ),
+                                      width: 320,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Text(
+                                            "Ingresa tu nombre",
+                                            style: TextStyle(
+                                              fontSize: 32,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 20),
+                                          const Text(
+                                            "Este nombre aparecerá en el marcador",
+                                            style: TextStyle(fontSize: 16, color: Colors.black87),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 20),
+                                          TextField(
+                                            autofocus: true,
+                                            decoration: InputDecoration(
+                                              hintText: 'Nombre del jugador',
+                                              border: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              contentPadding: const EdgeInsets.symmetric(
+                                                horizontal: 16,
+                                                vertical: 14,
+                                              ),
+                                            ),
+                                            style: const TextStyle(fontSize: 18),
+                                            onChanged: (v) => input = v,
+                                            onSubmitted: (value) {
+                                              if (value.trim().isNotEmpty) {
+                                                Navigator.of(ctx).pop(value.trim());
+                                              }
+                                            },
+                                          ),
+                                          const SizedBox(height: 30),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.of(ctx).pop(null),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.green.shade700,
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 25,
+                                                    vertical: 15,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  "Cancelar",
+                                                  style: TextStyle(fontSize: 18),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 20),
+                                              ElevatedButton(
+                                                onPressed: () {
+                                                  if (input.trim().isNotEmpty) {
+                                                    Navigator.of(ctx).pop(input.trim());
+                                                  }
+                                                },
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: const Color.fromARGB(255, 15, 172, 75),
+                                                  foregroundColor: Colors.white,
+                                                  padding: const EdgeInsets.symmetric(
+                                                    horizontal: 25,
+                                                    vertical: 15,
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                ),
+                                                child: const Text(
+                                                  "Aceptar",
+                                                  style: TextStyle(fontSize: 18),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(ctx).pop(null),
-                                      child: const Text('Cancelar'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () => Navigator.of(ctx).pop(input),
-                                      child: const Text('Aceptar'),
-                                    ),
-                                  ],
                                 );
                               },
                             );
@@ -247,7 +341,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
             ),
           ),
 
-          // Music toggle button (uses image assets). Positioned top-right, same size as other corner buttons.
+          // Music toggle button (uses image assets). Positioned top-right
           Positioned(
             right: 16,
             top: 16,
@@ -271,6 +365,34 @@ class _MainMenuPageState extends State<MainMenuPage> {
                       : (_isMusicPlaying
                           ? 'assets/ui/buttons/music_normal.png'
                           : 'assets/ui/buttons/music_off.png'),
+                  width: 90,
+                  height: 90,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+
+          // SFX toggle button - positioned directly below the music button
+          Positioned(
+            right: 16,
+            top: 16 + 90 + 12, // 16 padding top + 90 (height of music button) + 12 spacing
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _isSfxHovering = true),
+              onExit: (_) => setState(() => _isSfxHovering = false),
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    SfxController.toggleSfx();
+                  });
+                },
+                child: Image.asset(
+                  // choose asset based on hover and SFX state
+                  _isSfxHovering
+                      ? 'assets/ui/buttons/sfx_hover.png'
+                      : (SfxController.sfxEnabled
+                          ? 'assets/ui/buttons/sfx_normal.png'
+                          : 'assets/ui/buttons/sfx_off.png'),
                   width: 90,
                   height: 90,
                   fit: BoxFit.contain,
@@ -390,7 +512,9 @@ class _MainMenuPageState extends State<MainMenuPage> {
       }
     }
   });
-}}
+}
+}
+
 class OptionsPage extends StatelessWidget {
   const OptionsPage({super.key});
 

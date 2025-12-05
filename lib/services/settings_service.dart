@@ -10,12 +10,12 @@ class SettingsService {
   // Índices seleccionados
   static int selectedCarIndex = 0;
   static int selectedSceneIndex = 0;
+  static int selectedProfilePicture = 0; // NUEVO: índice de foto de perfil
   // Nombre del jugador (persistido en SharedPreferences)
   static String? playerName;
 
   // Rutas a assets disponibles (ajusta aquí si añades más)
   static const List<String> availableCars = [
-    // store base names; actual asset depends on orientation
     'orange_car',
     'moro',
     'unmoro'
@@ -57,6 +57,15 @@ class SettingsService {
     }
   }
 
+  // NUEVO: Método para guardar la foto de perfil seleccionada
+  static void setSelectedProfilePicture(int index) {
+    if (index < 0 || index >= 5) return; // Solo 5 fotos disponibles
+    selectedProfilePicture = index;
+    if (kDebugMode) {
+      debugPrint('SettingsService: selectedProfilePicture = $selectedProfilePicture');
+    }
+  }
+
   /// Inicializa desde SharedPreferences (llamar antes de runApp)
   static Future<void> init() async {
     try {
@@ -64,9 +73,10 @@ class SettingsService {
       orientation = GameOrientation.values[prefs.getInt('orientation') ?? orientation.index];
       selectedCarIndex = prefs.getInt('selectedCarIndex') ?? selectedCarIndex;
       selectedSceneIndex = prefs.getInt('selectedSceneIndex') ?? selectedSceneIndex;
+      selectedProfilePicture = prefs.getInt('selectedProfilePicture') ?? selectedProfilePicture; // NUEVO
       playerName = prefs.getString('playerName');
       if (kDebugMode) {
-        debugPrint('SettingsService.init: orientation=$orientation, car=$selectedCarIndex, scene=$selectedSceneIndex');
+        debugPrint('SettingsService.init: orientation=$orientation, car=$selectedCarIndex, scene=$selectedSceneIndex, profilePic=$selectedProfilePicture');
       }
     } catch (e) {
       if (kDebugMode) debugPrint('SettingsService.init error: $e');
@@ -80,6 +90,7 @@ class SettingsService {
       await prefs.setInt('orientation', orientation.index);
       await prefs.setInt('selectedCarIndex', selectedCarIndex);
       await prefs.setInt('selectedSceneIndex', selectedSceneIndex);
+      await prefs.setInt('selectedProfilePicture', selectedProfilePicture); // NUEVO
       if (playerName == null) {
         await prefs.remove('playerName');
       } else {

@@ -13,7 +13,7 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
   int _selectedProfilePicture = 0; // Índice de la foto de perfil seleccionada
   late AnimationController _fadeController;
   
-  // Lista de imágenes de perfil disponibles (debes crear estas imágenes en assets/profile_pictures/)
+  // Lista de imágenes de perfil disponibles 
   static const List<String> profilePictures = [
     'assets/profile/pic1.png',
     'assets/profile/pic2.png',
@@ -26,6 +26,8 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
   void initState() {
     super.initState();
     _playerName = SettingsService.playerName;
+    // Cargar la foto de perfil guardada
+    _selectedProfilePicture = SettingsService.selectedProfilePicture;
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -147,9 +149,23 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
   void _selectProfilePicture(int index) {
     setState(() {
       _selectedProfilePicture = index;
-      // Aquí podrías guardar la selección en SettingsService si quieres persistencia
-      // SettingsService.setSelectedProfilePicture(index);
+      // Guardar temporalmente en SettingsService
+      SettingsService.setSelectedProfilePicture(index);
     });
+  }
+
+  Future<void> _saveProfileChanges() async {
+    // Guardar la foto de perfil seleccionada
+    await SettingsService.save(); // Esto guardará TODAS las configuraciones
+    
+    // Mostrar mensaje de confirmación
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Información del perfil guardada'),
+        backgroundColor: Color.fromARGB(255, 15, 172, 75),
+        duration: Duration(seconds: 2),
+      )
+    );
   }
 
   @override
@@ -196,7 +212,7 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                   ),
                   const SizedBox(height: 18),
 
-                  // Información del perfil - CENTRADO
+                  // Información del perfil 
                   Center(
                     child: SizedBox(
                       width: MediaQuery.of(context).size.width * 0.85,
@@ -215,13 +231,13 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                                 child: ClipOval(
                                   child: Image.asset(
                                     profilePictures[_selectedProfilePicture],
-                                    width: 120,
-                                    height: 120,
+                                    width: 140,
+                                    height: 140,
                                     fit: BoxFit.cover,
                                     errorBuilder: (context, error, stackTrace) {
                                       return Container(
-                                        width: 120,
-                                        height: 120,
+                                        width: 140,
+                                        height: 140,
                                         decoration: BoxDecoration(
                                           color: Colors.white24,
                                           shape: BoxShape.circle,
@@ -272,7 +288,7 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
 
                   const SizedBox(height: 24),
 
-                  // Selección de foto de perfil - MÁS PEQUEÑAS
+                  // Selección de foto de perfil
                   Card(
                     color: Colors.white10,
                     elevation: 6,
@@ -294,14 +310,14 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                           const SizedBox(height: 12),
                           Center(
                             child: SizedBox(
-                              width: MediaQuery.of(context).size.width * 0.9,
+                              width: MediaQuery.of(context).size.width * 0.8,
                               child: GridView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
                                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                   crossAxisCount: 5,
-                                  crossAxisSpacing: 6,
-                                  mainAxisSpacing: 6,
+                                  crossAxisSpacing: 4,
+                                  mainAxisSpacing: 4,
                                   childAspectRatio: 1.0,
                                 ),
                                 itemCount: profilePictures.length,
@@ -311,18 +327,18 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                                     onTap: () => _selectProfilePicture(index),
                                     child: AnimatedContainer(
                                       duration: const Duration(milliseconds: 200),
-                                      width: 50, // Tamaño reducido
-                                      height: 50, // Tamaño reducido
+                                      width: 40, 
+                                      height: 40, 
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(10),
+                                        borderRadius: BorderRadius.circular(8), 
                                         border: Border.all(
                                           color: isSelected ? Colors.amber : Colors.transparent,
-                                          width: isSelected ? 2 : 0,
+                                          width: isSelected ? 1.5 : 0, 
                                         ),
                                         color: Colors.white10,
                                       ),
                                       child: ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
+                                        borderRadius: BorderRadius.circular(6), 
                                         child: Image.asset(
                                           profilePictures[index],
                                           fit: BoxFit.cover,
@@ -333,7 +349,7 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                                                 child: Icon(
                                                   Icons.person,
                                                   color: Colors.white,
-                                                  size: 20, // Ícono más pequeño
+                                                  size: 14,
                                                 ),
                                               ),
                                             );
@@ -361,7 +377,7 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
 
                   const SizedBox(height: 24),
 
-                  // Botón para volver
+                  // Botón para guardar cambios - SOLO UN BOTÓN
                   Center(
                     child: SizedBox(
                       width: MediaQuery.of(context).size.width * 0.85,
@@ -376,7 +392,7 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                             children: [
                               const Center(
                                 child: Text(
-                                  'Guardar cambios',
+                                  'Guardar cambios del perfil',
                                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
                                 ),
                               ),
@@ -388,11 +404,9 @@ class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   minimumSize: const Size(double.infinity, 50),
                                 ),
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                },
+                                onPressed: _saveProfileChanges,
                                 child: const Text(
-                                  'Volver a opciones',
+                                  'Guardar perfil',
                                   style: TextStyle(fontSize: 16),
                                 ),
                               ),
