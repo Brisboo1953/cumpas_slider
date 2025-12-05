@@ -96,7 +96,7 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                   ),
                   const SizedBox(height: 18),
 
-                  // Orientación
+                  // Orientación //
                   Card(
                     color: Colors.white10,
                     elevation: 6,
@@ -138,7 +138,7 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
 
                   const SizedBox(height: 12),
 
-                  // Selección de carrito
+                  // Selección del carrito //
                   Card(
                     color: Colors.white10,
                     elevation: 6,
@@ -157,7 +157,6 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                               itemCount: SettingsService.availableCars.length,
                               separatorBuilder: (_, __) => const SizedBox(width: 12),
                               itemBuilder: (context, idx) {
-                                // show single logical car; asset depends on orientation
                                 final asset = SettingsService.getCarAsset(idx, _orientation);
                                 final selected = idx == _selectedCar;
                                 return GestureDetector(
@@ -191,7 +190,7 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
 
                   const SizedBox(height: 12),
 
-                  // Selección de escenario - MODIFICADO
+                  // Selección de escenario //
                   Card(
                     color: Colors.white10,
                     elevation: 6,
@@ -207,10 +206,10 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 4, // Cambiado de 3 a 4 para más columnas
-                              childAspectRatio: 0.9, // Cambiado de 1.0 a 0.8 para cuadrados más pequeños
-                              crossAxisSpacing: 6, // Reducido de 8 a 6
-                              mainAxisSpacing: 6, // Reducido de 8 a 6
+                              crossAxisCount: 4, 
+                              childAspectRatio: 0.9, 
+                              crossAxisSpacing: 6, 
+                              mainAxisSpacing: 6, 
                             ),
                             itemCount: SettingsService.availableScenes.length,
                             itemBuilder: (ctx, i) {
@@ -221,32 +220,32 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 220),
                                   decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8), // Reducido de 10 a 8
+                                    borderRadius: BorderRadius.circular(8), 
                                     border: Border.all(
                                       color: selected ? Colors.lightGreenAccent : Colors.transparent,
-                                      width: selected ? 2 : 1, // Reducido de 3 a 2 cuando está seleccionado
+                                      width: selected ? 2 : 1,
                                     ),
                                     boxShadow: selected
-                                        ? [BoxShadow(color: const Color.fromRGBO(204, 255, 144, 0.15), blurRadius: 8, spreadRadius: 1)] // Reducido
+                                        ? [BoxShadow(color: const Color.fromRGBO(204, 255, 144, 0.15), blurRadius: 8, spreadRadius: 1)] 
                                         : [],
                                     image: DecorationImage(image: AssetImage(asset), fit: BoxFit.cover),
                                   ),
                                   child: Stack(
                                     children: [
-                                      // small 'Seleccionado' badge - más pequeño
+
                                       if (selected)
                                         Positioned(
-                                          top: 4, // Reducido de 6 a 4
-                                          right: 4, // Reducido de 6 a 4
+                                          top: 4, 
+                                          right: 4, 
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1), // Reducido
+                                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1), 
                                             decoration: BoxDecoration(
                                               color: Colors.black54,
-                                              borderRadius: BorderRadius.circular(4), // Reducido
+                                              borderRadius: BorderRadius.circular(4), 
                                             ),
                                             child: const Text(
                                               'Seleccionado',
-                                              style: TextStyle(color: Colors.white, fontSize: 8), // Reducido de 10 a 8
+                                              style: TextStyle(color: Colors.white, fontSize: 8), 
                                             ),
                                           ),
                                         ),
@@ -263,7 +262,7 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
 
                   const SizedBox(height: 18),
 
-                  // Perfil
+                  // Perfil //
                   Row(
                     children: [
                       Expanded(
@@ -283,7 +282,7 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                   ),
                   const SizedBox(height: 12),
 
-                  // Guardar / Reset - MODIFICADO para tener el mismo diseño que los botones de orientación
+                  // Guardar //
                   Card(
                     color: Colors.white10,
                     elevation: 6,
@@ -307,7 +306,7 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                                     foregroundColor: Colors.white,
                                   ),
                                   onPressed: () async {
-                                    // Guarda en SharedPreferences
+                                    // Guarda en preferencias //
                                     await SettingsService.save();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -335,7 +334,6 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                                       _selectedCar = SettingsService.selectedCarIndex;
                                       _selectedScene = SettingsService.selectedSceneIndex;
                                     });
-                                    // Persiste restablecimiento
                                     await SettingsService.save();
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(

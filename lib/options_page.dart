@@ -10,7 +10,6 @@ class OptionsPage extends StatefulWidget {
 }
 
 class _OptionsPageState extends State<OptionsPage> {
-  // Asegúrate de que GameOrientation está definido en services/settings_service.dart
   GameOrientation _orientation = SettingsService.orientation;
   int _selectedCar = SettingsService.selectedCarIndex;
   int _selectedScene = SettingsService.selectedSceneIndex;
@@ -70,7 +69,7 @@ class _OptionsPageState extends State<OptionsPage> {
                 ),
                 const SizedBox(height: 18),
 
-                // ORIENTACIÓN
+                // ORIENTACIÓN //
                 Card(
                   color: Colors.white10,
                   elevation: 6,
@@ -87,7 +86,6 @@ class _OptionsPageState extends State<OptionsPage> {
                             Expanded(
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  // Eliminado: transitionDuration para evitar el error de compilación.
                                   backgroundColor: _orientation == GameOrientation.vertical ? Colors.teal : Colors.white12,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -100,7 +98,6 @@ class _OptionsPageState extends State<OptionsPage> {
                             Expanded(
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  // Eliminado: transitionDuration para evitar el error de compilación.
                                   backgroundColor: _orientation == GameOrientation.horizontal ? Colors.teal : Colors.white12,
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -118,7 +115,7 @@ class _OptionsPageState extends State<OptionsPage> {
 
                 const SizedBox(height: 12),
 
-                // SELECCIÓN DE CARRO
+                // SELECCIÓN DEL CARRO //
                 Card(
                   color: Colors.white10,
                   elevation: 6,
@@ -141,13 +138,12 @@ class _OptionsPageState extends State<OptionsPage> {
                               final selected = idx == _selectedCar;
                               final carName = SettingsService.availableCars[idx]['name'] as String?;
 
-                              // Utilizamos un factor de escala si es necesario, pero manteniendo tu lógica original
                               final double scaleFactor = idx == 1 ? 2.5 : 1.0;
 
                               return GestureDetector(
                                 onTap: () => _onSelectCar(idx),
                                 child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 250), // Duración rápida para fluidez
+                                  duration: const Duration(milliseconds: 250), // Fluidez //
                                   width: selected ? 140 : 110,
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(12),
@@ -186,7 +182,7 @@ class _OptionsPageState extends State<OptionsPage> {
 
                 const SizedBox(height: 12),
 
-                // ESCENARIOS
+                // ESCENARIOS //
                 Card(
                   color: Colors.white10,
                   elevation: 6,
@@ -215,7 +211,7 @@ class _OptionsPageState extends State<OptionsPage> {
                             return GestureDetector(
                               onTap: () => _onSelectScene(i),
                               child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 220), // Duración rápida para fluidez
+                                duration: const Duration(milliseconds: 220), // Fluidez //
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(color: selected ? Colors.lightGreenAccent : Colors.transparent, width: selected ? 3 : 1),
@@ -238,7 +234,7 @@ class _OptionsPageState extends State<OptionsPage> {
 
                 const SizedBox(height: 18),
 
-                // PERFIL
+                // PERFIL //
                 Row(
                   children: [
                     Expanded(
@@ -260,7 +256,7 @@ class _OptionsPageState extends State<OptionsPage> {
                 ),
                 const SizedBox(height: 12),
 
-                // GUARDAR / RESET
+                // GUARDAR //
                 Row(
                   children: [
                     Expanded(

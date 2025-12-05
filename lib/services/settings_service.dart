@@ -4,18 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum GameOrientation { vertical, horizontal }
 
 class SettingsService {
-  // Valores por defecto
   static GameOrientation orientation = GameOrientation.vertical;
 
-  // Índices seleccionados
   static int selectedCarIndex = 0;
   static int selectedSceneIndex = 0;
-  // Nombre del jugador (persistido en SharedPreferences)
+  // Nombre del jugador //
   static String? playerName;
 
-  // Rutas a assets disponibles (ajusta aquí si añades más)
   static const List<String> availableCars = [
-    // store base names; actual asset depends on orientation
     'orange_car',
     'moro'
   ];
@@ -56,7 +52,7 @@ class SettingsService {
     }
   }
 
-  /// Inicializa desde SharedPreferences (llamar antes de runApp)
+  /// Inicia la app con preferencias predeterminadas //
   static Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -72,7 +68,7 @@ class SettingsService {
     }
   }
 
-  /// Guarda las opciones actuales en SharedPreferences
+  /// Guarda las opciones de preferencias //
   static Future<void> save() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -90,7 +86,7 @@ class SettingsService {
     }
   }
 
-  /// Actualiza el nombre del jugador en memoria y lo persiste.
+  /// Actualiza el nombre del jugador en la memoria//
   static Future<void> setPlayerName(String? name) async {
     playerName = (name == null || name.trim().isEmpty) ? null : name.trim();
     await save();

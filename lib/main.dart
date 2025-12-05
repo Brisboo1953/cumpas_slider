@@ -17,7 +17,6 @@ void main() async {
   try {
     await dotenv.load(fileName: '.env');
   } catch (e) {
-    // Si no existe .env, continúa.
   }
 
   final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
@@ -53,9 +52,8 @@ class MyGameApp extends StatelessWidget {
   }
 }
 
-// ----------------------------------------------------------
-// MENÚ PRINCIPAL
-// ----------------------------------------------------------
+
+// MENÚ PRINCIPAL //
 class MainMenuPage extends StatefulWidget {
   const MainMenuPage({super.key});
 
@@ -127,30 +125,26 @@ class _MainMenuPageState extends State<MainMenuPage> {
             ),
           ),
 
-          // Custom layout: play centered (bigger), exit under play (smaller),
-          // options top-left, scoreboard bottom-right.
           Positioned.fill(
             child: Stack(
               children: [
-                // Center play + exit below
+                // Boton de play //
                 Align(
                   alignment: Alignment(0, 0.30),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Play button, slightly larger
                       CustomMenuButton(
                         buttonName: 'play',
                         width: 120,
                         height: 120,
                         scale: 1.0,
                         onTap: () async {
-                          // If we already have a stored player name, use it.
+                          // Storage del nombre //
                           String? stored = SettingsService.playerName;
                           String? name = stored;
 
                           if (stored == null || stored.trim().isEmpty) {
-                            // Ask for name and persist it for the session (and across launches)
                             final entered = await showDialog<String?>(
                               context: context,
                               barrierDismissible: false,
@@ -195,7 +189,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
 
                       const SizedBox(height: 12),
 
-                      // Exit button, smaller, under play
+                      // Boton de salir //
                       CustomMenuButton(
                         buttonName: 'exit',
                         width: 90,
@@ -207,7 +201,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
                   ),
                 ),
 
-                // Options top-left
+                // Boton de opciones //
                 Positioned(
                   left: 16,
                   top: 16,
@@ -225,7 +219,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
                   ),
                 ),
 
-                // Scoreboard bottom-right
+                // Boton de puntuación //
                 Positioned(
                   right: 16,
                   bottom: 16,
@@ -246,7 +240,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
             ),
           ),
 
-          // Music toggle button (uses image assets). Positioned top-right, same size as other corner buttons.
+          // Botón de musica //
           Positioned(
             right: 16,
             top: 16,
@@ -264,7 +258,6 @@ class _MainMenuPageState extends State<MainMenuPage> {
                   }
                 },
                 child: Image.asset(
-                  // choose asset based on hover and play state
                   _isMusicHovering
                       ? 'assets/ui/buttons/music_hover.png'
                       : (_isMusicPlaying
@@ -282,7 +275,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
     );
   }
 
-  /// Confirmación para salir
+  /// Confirmación para salir //
   void _confirmExit(BuildContext context) {
     showDialog(
       context: context,
@@ -305,9 +298,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
   }
 }
 
-// ----------------------------------------------------------
-// PANTALLA DE OPCIONES (placeholder)
-// ----------------------------------------------------------
+// PANTALLA DE OPCIONES //
 class OptionsPage extends StatelessWidget {
   const OptionsPage({super.key});
 
