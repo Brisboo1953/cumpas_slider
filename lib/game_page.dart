@@ -6,7 +6,6 @@ import 'services/settings_service.dart';
 import 'services/supabase_service.dart';
 import 'services/sfx_service.dart';
 
-// Definiciones de constantes para objetos
 const double _coinSize = 40.0;
 const double _pacaSize = 80.0; 
 const double _snakeSize = 60.0; 
@@ -23,63 +22,62 @@ class GamePage extends StatefulWidget {
 }
 
 class _GamePageState extends State<GamePage> {
-  // Posición y tamaño del auto
+  // Posición y tamaño del auto //
   double carX = 0; 
   double carY = 0; 
   double carWidth = 100;
   double carHeight = 60;
   
-  // Tamaños adaptativos a la orientación
+  // Tamaños de los objetos //
   double coinSize = _coinSize;
   double pacaSizeLocal = _pacaSize;
   double snakeSizeLocal = _snakeSize; 
 
-  // Listas de objetos en el juego
+  
   List<Offset> coins = [];
   List<Offset> pacas = [];
   List<Offset> snakes = []; 
 
-  // Estado del juego
+  // Estado del juego //
   int score = 0;
   double gasoline = 100;
   bool isGameOver = false;
-  bool isPaused = false; // Nuevo estado para pausa
+  bool isPaused = false; // pausa //
 
-  // Temporizadores
+  // Temporizadores //
   Timer? objectTimer;
   Timer? moveTimer;
   Timer? gasolineTimer;
 
-  // Movimiento
+  // Movimiento //
   double backgroundOffset = 0;
   double backgroundSpeed = 5; 
   
-  // Nivel de dificultad
+  // Nivel de dificultad //
   int currentLevel = 1;
-  int nextLevelScore = 500; 
+  int nextLevelScore = 300; 
 
-  // La orientación ahora usa el tipo GameOrientation de SettingsService.
   GameOrientation orientation = GameOrientation.vertical;
 
-  @override
+@override
 void initState() {
   super.initState();
   
+  // Obtiene la orientación (Vertical/Horizontal) según preferencias
   orientation = SettingsService.orientation;
   
   // Detectar qué carro está seleccionado
   final selectedCarIndex = SettingsService.selectedCarIndex;
-  final isMoroCar = selectedCarIndex == 1;  // moro está en índice 1
-  final isUnmoroCar = selectedCarIndex == 2;  // unmoro está en índice 2 (nuevo)
+  final isOrangeCar = selectedCarIndex == 0;
+  final isMoroCar = selectedCarIndex == 1;
+  final isUnmoroCar = selectedCarIndex == 2;
 
+  // Configurar tamaños según orientación y tipo de carro
   if (orientation == GameOrientation.horizontal) {
     // Tamaños adaptados para cada carro en modo horizontal
-    if (isMoroCar) {
+    if (isMoroCar || isUnmoroCar) {
       carWidth = 220;
       carHeight = 100;
-    } else if (isUnmoroCar) {
-       carWidth = 220;  // Ajusta según necesites
-      carHeight = 100;   // Ajusta según necesites
     } else {
       carWidth = 140;  // orange_car
       carHeight = 50;
@@ -89,12 +87,9 @@ void initState() {
     snakeSizeLocal = 45.0; 
   } else {
     // Tamaños adaptados para cada carro en modo vertical
-    if (isMoroCar) {
+    if (isMoroCar || isUnmoroCar) {
       carWidth = 160;
       carHeight = 130;
-    } else if (isUnmoroCar) {
-      carWidth = 160;  // Ajusta según necesites
-      carHeight = 130;  // Ajusta según necesites
     } else {
       carWidth = 100;  // orange_car
       carHeight = 60;
@@ -109,17 +104,16 @@ void initState() {
   _startMovement();
 
   // Reproducir sonidos según el carro seleccionado
-  final isOrangeCar = selectedCarIndex == 0;
   if (isOrangeCar) {
-  try {
-    SfxService.playCarEngine();
-  } catch (_) {}
-} else if (isMoroCar || isUnmoroCar) {
-  // Ambos (moro y unmoro) usan el mismo sonido de caballo
-  try {
-    SfxService.playHorseNeigh();
-  } catch (_) {}
-}
+    try {
+      SfxService.playCarEngine();
+    } catch (_) {}
+  } else if (isMoroCar || isUnmoroCar) {
+    // Ambos (moro y unmoro) usan el mismo sonido de caballo
+    try {
+      SfxService.playHorseNeigh();
+    } catch (_) {}
+  }
 }
   
   void _stopGame() {
@@ -163,7 +157,7 @@ void initState() {
     }
   }
 
-  // GASOLINA
+  // GASOLINA //
   void _startGasoline() {
     gasolineTimer = Timer.periodic(const Duration(milliseconds: 120), (timer) {
       if (gasoline <= 0) {
@@ -187,7 +181,7 @@ void initState() {
     });
   }
 
-  // GENERA OBJETOS
+  // GENERA LOS OBJETOS //
   void _startObjects() {
     objectTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (isGameOver) return; 
@@ -224,7 +218,7 @@ void initState() {
     }
   }
   
-  // FUNCIÓN PARA GENERAR SERPIENTES
+  // FUNCIÓN PARA GENERAR SERPIENTES //
   void _spawnSnake(int count) {
     final random = Random();
     final w = MediaQuery.of(context).size.width;
@@ -238,7 +232,7 @@ void initState() {
     }
   }
 
-  // MUEVE OBJETOS Y FONDO
+  // MUEVE OBJETOS Y FONDO //
   void _startMovement() {
     moveTimer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
       if (isGameOver || isPaused) return; 
@@ -249,22 +243,20 @@ void initState() {
       setState(() {
         backgroundOffset += backgroundSpeed;
         
-        // Lógica de desplazamiento del fondo mejorada para evitar el "corte" en modo vertical
+        // Repetición fondo // 
         if (orientation == GameOrientation.vertical) {
-          // Usamos la altura de la pantalla (h) para calcular el ciclo de repetición.
           if (backgroundOffset >= h * 3) {
             backgroundOffset -= h * 2;
           }
         } else {
-          // Lógica para horizontal (que ya usaba el ancho de pantalla)
+          // Lógica para horizontal //
           if (backgroundOffset >= w * 3) {
             backgroundOffset -= w * 2;
           }
         }
 
-        // Mueve objetos según orientación
+        // Mueve objetos según orientación //
         if (orientation == GameOrientation.vertical) {
-          // Mover objetos con la misma velocidad del fondo para sincronía visual
           coins = coins
             .map((c) => Offset(c.dx, c.dy + backgroundSpeed))
             .where((c) => c.dy < h + 50)
@@ -281,7 +273,6 @@ void initState() {
             .toList();
             
         } else {
-          // horizontal: move objects left as background scrolls right->left
           coins = coins
             .map((c) => Offset(c.dx - backgroundSpeed, c.dy))
             .where((c) => c.dx > -50)
@@ -329,12 +320,12 @@ void initState() {
     bool scoreChanged = false;
     bool gasolineChanged = false;
 
-    // Colisión con Monedas
+    // Recoger monedas //
     coins.removeWhere((c) {
       final r = Rect.fromLTWH(c.dx, c.dy, coinSize, coinSize).deflate(4.0);
       if (carHit.overlaps(r)) {
         score += 10;
-        // Reproducir efecto de sonido al recoger moneda
+        
         try {
           SfxService.playCoin();
         } catch (_) {}
@@ -344,13 +335,12 @@ void initState() {
       return false;
     });
 
-    // Colisión con Pacas
+    //  Recoger pacas //
     pacas.removeWhere((p) {
       final r = Rect.fromLTWH(p.dx, p.dy, pacaSizeLocal, pacaSizeLocal).deflate(6.0);
       if (carHit.overlaps(r)) {
         gasoline = min(100, gasoline + 30);
         gasolineChanged = true;
-        // Reproducir efecto de sonido al recoger paca
         try {
           SfxService.playPaca();
         } catch (_) {}
@@ -359,28 +349,24 @@ void initState() {
       return false;
     });
     
-    // COLISIÓN CON SERPIENTES (Obstáculo que quita gasolina)
+    // CHOQUE CON SERPIENTES //
     snakes.removeWhere((s) {
       final r = Rect.fromLTWH(s.dx, s.dy, snakeSizeLocal, snakeSizeLocal).deflate(6.0);
       if (carHit.overlaps(r)) {
         gasoline = max(0, gasoline - _snakeGasolinePenalty);
         gasolineChanged = true;
-        // Reproducir efecto de sonido al tocar serpiente
         try {
           SfxService.playSnakeHiss();
         } catch (_) {}
-        // No incrementa la puntuación
         return true;
       }
       return false;
     });
-    
-    // LLAMADA PARA REVISAR EL NIVEL
+     // Incremento de nivel //
     if (scoreChanged) {
       _updateLevel();
     }
     
-    // Forzar la actualización del estado si algo cambió
     if (scoreChanged || gasolineChanged) {
       setState(() {});
     }
@@ -392,7 +378,7 @@ void initState() {
     super.dispose();
   }
   
-  // WIDGET: Ventana de Game Over
+  // Ventana de Game Over //
   Widget _buildGameOverOverlay() {
     return Positioned.fill(
       child: Container(
@@ -449,7 +435,7 @@ void initState() {
     );
   }
 
-  // WIDGET: Ventana de Pausa
+  // Ventana de Pausa //
   Widget _buildPauseOverlay() {
     return Positioned.fill(
       child: Container(
@@ -621,7 +607,7 @@ void initState() {
     );
   }
 
-  // Widget personalizado para el botón de pausa
+  // Botón de pausa //
   Widget _buildPauseButton() {
     return Positioned(
       top: 12,
@@ -645,7 +631,7 @@ void initState() {
       body: SafeArea(
         child: Stack(
           children: [
-            // FONDO (USANDO TRES IMÁGENES PARA DESPLAZAMIENTO FLUIDO)
+            // FONDO (USANDO TRES IMÁGENES) 
             Positioned.fill(
               child: Builder(builder: (context) {
                 final sceneAsset = SettingsService.availableScenes[SettingsService.selectedSceneIndex];
@@ -691,7 +677,7 @@ void initState() {
               }),
             ),
 
-            // OBJETOS (Monedas, Pacas y Serpientes)
+            // OBJETOS //
             ...coins.map((c) => Positioned(
                 left: c.dx,
                 top: c.dy,
@@ -709,7 +695,7 @@ void initState() {
               )),
             
 
-            // Draw the DraggableCar
+            // Aparición del carro //
             if (orientation == GameOrientation.vertical)
               Align(
                 alignment: Alignment.bottomCenter,
@@ -765,7 +751,7 @@ void initState() {
                 ),
               ),
 
-            // SCORE Y GASOLINA (UI)
+            // SCORE Y GASOLINA (UI) //
             Positioned(
               top: 20,
               left: 20,
@@ -807,13 +793,11 @@ void initState() {
               ),
             ),
             
-            // BOTÓN DE PAUSA PERSONALIZADO
             _buildPauseButton(),
             
-            // OVERLAY DE PAUSA (si el juego está pausado)
             if (isPaused && !isGameOver) _buildPauseOverlay(),
             
-            // GAME OVER CONDICIONAL
+            // GAME OVER DE PAUSA //
             if (isGameOver) _buildGameOverOverlay(),
           ],
         ),
@@ -822,7 +806,7 @@ void initState() {
   }
 }
 
-// Widget personalizado para el botón de pausa
+// Botón de pausa //
 class _PauseButton extends StatefulWidget {
   final VoidCallback onTap;
   

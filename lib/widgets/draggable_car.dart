@@ -6,7 +6,6 @@ class DraggableCar extends StatefulWidget {
   final double height;
 
   final ValueChanged<int>? onScoreChanged;
-  // CAMBIO CLAVE: Ahora solo reportamos el desplazamiento horizontal (_x)
   final ValueChanged<double>? onXPositionChanged; 
   final ValueChanged<double>? onYPositionChanged;
   final bool verticalMovement;
@@ -17,7 +16,7 @@ class DraggableCar extends StatefulWidget {
     this.width = 100,
     this.height = 60,
     this.onScoreChanged,
-    this.onXPositionChanged, // Usamos la nueva propiedad
+    this.onXPositionChanged, 
     this.onYPositionChanged,
     this.verticalMovement = false,
   });
@@ -27,7 +26,7 @@ class DraggableCar extends StatefulWidget {
 }
 
 class _DraggableCarState extends State<DraggableCar> {
-  // Desplazamiento del carro desde el centro (0)
+  // Desplazamiento del carro en el centro //
   double _x = 0;
   double maxWidth = 0;
 
@@ -42,32 +41,26 @@ class _DraggableCarState extends State<DraggableCar> {
         double halfCarWidth = widget.width / 2;
         double halfCarHeight = widget.height / 2;
 
-        // Límites para movimiento horizontal
-        // Ajustamos los factores de margen para dar menos libertad a la izquierda
-        // y algo más de libertad a la derecha.
-        // leftMarginFactor: porcentaje del ancho total que recorta el límite izquierdo
-        // rightMarginFactor: porcentaje del ancho total que recorta el límite derecho
-        double leftMarginFactor = 0.05; // 5% menos a la izquierda
-        double rightMarginFactor = 0.02; // 2% menos a la derecha
+        // Límites para movimiento horizontal //
+        double leftMarginFactor = 0.05; 
+        double rightMarginFactor = 0.02; 
 
         double minX = -maxWidth / 2 + halfCarWidth + (maxWidth * leftMarginFactor);
         double maxX = maxWidth / 2 - halfCarWidth - (maxWidth * rightMarginFactor);
 
-        // Límites para movimiento vertical (relativos al centro)
+        // Límites para movimiento vertical //
         double minY = -maxHeight / 2 + halfCarHeight;
         double maxY = maxHeight / 2 - halfCarHeight;
 
         return GestureDetector(
           onPanStart: (d) {
-            // No special action needed on start; we update in onPanUpdate
           },
           onPanUpdate: (d) {
             setState(() {
               if (widget.verticalMovement) {
                 double newY = d.localPosition.dy - (maxHeight / 2);
                 newY = newY.clamp(minY, maxY);
-                // store vertical offset in a temporary field by reusing _x? Better to use a new state var
-                // We'll add _y field to the state class dynamically below if not present.
+
                 _y = newY;
                 widget.onYPositionChanged?.call(_y);
               } else {
@@ -100,15 +93,13 @@ class _DraggableCarState extends State<DraggableCar> {
     );
   }
 
-  // vertical offset stored here
   double _y = 0;
 
-  // Función original para calcular un score (no modificada)
+  // Función para calcular score //
   int _calcScore() {
     double slider = maxWidth - widget.width;
     double percent = (_x + slider / 2) / slider;
     return (percent.clamp(0, 1) * 100).round();
   }
 
-  // La función _reportCarPosition() se ha eliminado para mejorar el rendimiento.
 }

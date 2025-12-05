@@ -102,7 +102,7 @@ class _ScoreboardPageState extends State<ScoreboardPage> with TickerProviderStat
       ),
       body: Stack(
         children: [
-          // Fondo degradado acorde al juego
+          // Fondo degradado dependiendo del juego //
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -117,7 +117,7 @@ class _ScoreboardPageState extends State<ScoreboardPage> with TickerProviderStat
             ),
           ),
 
-          // Contenido
+          // Contenido //
           FutureBuilder<List<Map<String, dynamic>>>(
             future: _scoresFuture,
             builder: (context, snapshot) {
@@ -220,7 +220,7 @@ class _ScoreboardPageState extends State<ScoreboardPage> with TickerProviderStat
                       final position = index + 1;
                       final isMedal = position <= 3;
 
-                      // Animación escalonada para cada fila
+                      // Animación por puntuación //
                       return ScoreCard(
                         position: position,
                         name: name,
@@ -384,7 +384,7 @@ class _ScoreCardState extends State<ScoreCard> with TickerProviderStateMixin {
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   children: [
-                    // Medalla / Posición
+                    // Medalla //
                     Container(
                       width: 60,
                       height: 60,
@@ -447,7 +447,7 @@ class _ScoreCardState extends State<ScoreCard> with TickerProviderStateMixin {
                       ),
                     ),
 
-                    // Puntuación
+                    // Puntuación //
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [

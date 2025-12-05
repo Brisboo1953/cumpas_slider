@@ -3,18 +3,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum GameOrientation { vertical, horizontal }
 
+
 class SettingsService {
-  // Valores por defecto
   static GameOrientation orientation = GameOrientation.vertical;
 
-  // Índices seleccionados
   static int selectedCarIndex = 0;
   static int selectedSceneIndex = 0;
-  static int selectedProfilePicture = 0; // NUEVO: índice de foto de perfil
+
+  // NUEVO: índice de foto de perfil
+  static int selectedProfilePicture = 0;
+
   // Nombre del jugador (persistido en SharedPreferences)
   static String? playerName;
 
-  // Rutas a assets disponibles (ajusta aquí si añades más)
   static const List<String> availableCars = [
     'orange_car',
     'moro',
@@ -57,9 +58,10 @@ class SettingsService {
     }
   }
 
+
   // NUEVO: Método para guardar la foto de perfil seleccionada
   static void setSelectedProfilePicture(int index) {
-    if (index < 0 || index >= 5) return; // Solo 5 fotos disponibles
+    if (index < 0 || index >= 5) return; //  disponibles
     selectedProfilePicture = index;
     if (kDebugMode) {
       debugPrint('SettingsService: selectedProfilePicture = $selectedProfilePicture');
@@ -67,7 +69,7 @@ class SettingsService {
   }
 
   /// Inicializa desde SharedPreferences (llamar antes de runApp)
-  static Future<void> init() async {
+ static Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       orientation = GameOrientation.values[prefs.getInt('orientation') ?? orientation.index];
@@ -83,7 +85,7 @@ class SettingsService {
     }
   }
 
-  /// Guarda las opciones actuales en SharedPreferences
+  /// Guarda las opciones de preferencias //
   static Future<void> save() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -102,7 +104,7 @@ class SettingsService {
     }
   }
 
-  /// Actualiza el nombre del jugador en memoria y lo persiste.
+  /// Actualiza el nombre del jugador en la memoria//
   static Future<void> setPlayerName(String? name) async {
     playerName = (name == null || name.trim().isEmpty) ? null : name.trim();
     await save();
