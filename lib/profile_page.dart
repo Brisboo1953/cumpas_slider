@@ -8,13 +8,34 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage> with TickerProviderStateMixin {
   String? _playerName;
+  int _selectedProfilePicture = 0; // Índice de la foto de perfil seleccionada
+  late AnimationController _fadeController;
+  
+  // Lista de imágenes de perfil disponibles (debes crear estas imágenes en assets/profile_pictures/)
+  static const List<String> profilePictures = [
+    'assets/profile/pic1.png',
+    'assets/profile/pic2.png',
+    'assets/profile/pic3.png',
+    'assets/profile/pic4.png',
+    'assets/profile/pic5.png',
+  ];
 
   @override
   void initState() {
     super.initState();
     _playerName = SettingsService.playerName;
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   Future<void> _editName() async {
@@ -22,16 +43,91 @@ class _ProfilePageState extends State<ProfilePage> {
     final result = await showDialog<String?>(
       context: context,
       builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Editar nombre de jugador'),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: 'Nombre'),
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(30),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 15,
+                    color: Colors.black87,
+                    offset: Offset(0, 8),
+                  )
+                ],
+              ),
+              width: 320,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Editar nombre',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      hintText: 'Ingresa tu nombre',
+                      border: OutlineInputBorder(),
+                    ),
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 30),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(null),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 25,
+                            vertical: 15,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Cancelar',
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color.fromARGB(255, 15, 172, 75),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 25,
+                            vertical: 15,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Guardar',
+                          style: TextStyle(fontSize: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(null), child: const Text('Cancelar')),
-            TextButton(onPressed: () => Navigator.of(ctx).pop(controller.text.trim()), child: const Text('Guardar')),
-          ],
         );
       },
     );
@@ -39,78 +135,277 @@ class _ProfilePageState extends State<ProfilePage> {
     if (result != null) {
       await SettingsService.setPlayerName(result);
       setState(() => _playerName = SettingsService.playerName);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Nombre actualizado')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nombre actualizado'),
+          backgroundColor: Color.fromARGB(255, 15, 172, 75),
+        )
+      );
     }
+  }
+
+  void _selectProfilePicture(int index) {
+    setState(() {
+      _selectedProfilePicture = index;
+      // Aquí podrías guardar la selección en SettingsService si quieres persistencia
+      // SettingsService.setSelectedProfilePicture(index);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Perfil')),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        title: const Text(
+          'PERFIL',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30, letterSpacing: 3, color: Colors.white),
+        ),
+        centerTitle: true,
+        backgroundColor: const Color.fromARGB(23, 181, 78, 241),
+        elevation: 0,
+      ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF283048), Color(0xFF859398)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
+            colors: [
+              Color.fromARGB(255, 73, 182, 255),
+              Color.fromARGB(255, 0, 153, 255),
+              Color.fromARGB(202, 41, 0, 58),
+            ],
           ),
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Column(
-                    children: [
-                      CircleAvatar(radius: 48, backgroundColor: Colors.white24, child: const Icon(Icons.person, size: 48, color: Colors.white)),
-                      const SizedBox(height: 12),
-                      const Text('Jugador', style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 6),
-                      const Text('Edita tu perfil y personaliza tu experiencia.', style: TextStyle(color: Colors.white70), textAlign: TextAlign.center),
-                    ],
+        child: FadeTransition(
+          opacity: _fadeController,
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 100, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Tu Perfil",
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
-                ),
-                const SizedBox(height: 24),
-                const Text('Cuenta', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 8),
-                Card(
-                  color: Colors.white10,
-                  child: ListTile(
-                    leading: const Icon(Icons.person, color: Colors.white),
-                    title: Text(_playerName ?? 'Sin nombre', style: const TextStyle(color: Colors.white)),
-                    trailing: TextButton(onPressed: _editName, child: const Text('Editar')),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Personaliza tu información y foto de perfil.",
+                    style: TextStyle(color: Colors.white70),
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Text('Preferencias', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                const SizedBox(height: 8),
-                Card(
-                  color: Colors.white10,
-                  child: ListTile(
-                    leading: const Icon(Icons.palette, color: Colors.white),
-                    title: const Text('Tema del juego', style: TextStyle(color: Colors.white)),
-                    trailing: DropdownButton<String>(
-                      value: 'Oscuro',
-                      items: const [DropdownMenuItem(value: 'Oscuro', child: Text('Oscuro')), DropdownMenuItem(value: 'Claro', child: Text('Claro'))],
-                      onChanged: (_) {},
+                  const SizedBox(height: 18),
+
+                  // Información del perfil - CENTRADO
+                  Center(
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      child: Card(
+                        color: Colors.white10,
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircleAvatar(
+                                radius: 60,
+                                backgroundColor: Colors.transparent,
+                                child: ClipOval(
+                                  child: Image.asset(
+                                    profilePictures[_selectedProfilePicture],
+                                    width: 120,
+                                    height: 120,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 120,
+                                        height: 120,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white24,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.person,
+                                          size: 70,
+                                          color: Colors.white,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                _playerName ?? 'Sin nombre',
+                                style: const TextStyle(
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Este nombre aparecerá en el marcador',
+                                style: TextStyle(color: Colors.white70, fontSize: 14),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 20),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color.fromARGB(255, 15, 172, 75),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                                ),
+                                onPressed: _editName,
+                                icon: const Icon(Icons.edit),
+                                label: const Text('Editar nombre', style: TextStyle(fontSize: 16)),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const Spacer(),
-                Center(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                      child: Text('Guardar y volver'),
+
+                  const SizedBox(height: 24),
+
+                  // Selección de foto de perfil - MÁS PEQUEÑAS
+                  Card(
+                    color: Colors.white10,
+                    elevation: 6,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Foto de perfil',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Selecciona una imagen para tu perfil',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 12),
+                          Center(
+                            child: SizedBox(
+                              width: MediaQuery.of(context).size.width * 0.9,
+                              child: GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 5,
+                                  crossAxisSpacing: 6,
+                                  mainAxisSpacing: 6,
+                                  childAspectRatio: 1.0,
+                                ),
+                                itemCount: profilePictures.length,
+                                itemBuilder: (context, index) {
+                                  final isSelected = index == _selectedProfilePicture;
+                                  return GestureDetector(
+                                    onTap: () => _selectProfilePicture(index),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      width: 50, // Tamaño reducido
+                                      height: 50, // Tamaño reducido
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: isSelected ? Colors.amber : Colors.transparent,
+                                          width: isSelected ? 2 : 0,
+                                        ),
+                                        color: Colors.white10,
+                                      ),
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.asset(
+                                          profilePictures[index],
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return Container(
+                                              color: Colors.white24,
+                                              child: const Center(
+                                                child: Icon(
+                                                  Icons.person,
+                                                  color: Colors.white,
+                                                  size: 20, // Ícono más pequeño
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          const Center(
+                            child: Text(
+                              'Selecciona una imagen haciendo clic en ella',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 24),
+
+                  // Botón para volver
+                  Center(
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width * 0.85,
+                      child: Card(
+                        color: Colors.white10,
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Center(
+                                child: Text(
+                                  'Guardar cambios',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color.fromARGB(255, 15, 172, 75),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  minimumSize: const Size(double.infinity, 50),
+                                ),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: const Text(
+                                  'Volver a opciones',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
+              ),
             ),
           ),
         ),

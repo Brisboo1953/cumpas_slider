@@ -17,7 +17,8 @@ class SettingsService {
   static const List<String> availableCars = [
     // store base names; actual asset depends on orientation
     'orange_car',
-    'moro'
+    'moro',
+    'unmoro'
   ];
 
   static String getCarAsset(int index, GameOrientation orientation) {

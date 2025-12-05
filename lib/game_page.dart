@@ -62,47 +62,65 @@ class _GamePageState extends State<GamePage> {
   GameOrientation orientation = GameOrientation.vertical;
 
   @override
-  void initState() {
-    super.initState();
-    
-    // Obteniendo la orientación desde SettingsService para inicializar el estado
-    orientation = SettingsService.orientation;
-    
-    // Detectar si el carro seleccionado es "moro" (índice 1)
-    final isMoroCar = SettingsService.selectedCarIndex == 1;
-    
-    if (orientation == GameOrientation.horizontal) {
-      // Tamaños más grandes para el caballo moro en modo horizontal
-      carWidth = isMoroCar ? 220 : 140;
-      carHeight = isMoroCar ? 100 : 50;
-      coinSize = 28.0;
-      pacaSizeLocal = 60.0;
-      snakeSizeLocal = 45.0; 
+void initState() {
+  super.initState();
+  
+  orientation = SettingsService.orientation;
+  
+  // Detectar qué carro está seleccionado
+  final selectedCarIndex = SettingsService.selectedCarIndex;
+  final isMoroCar = selectedCarIndex == 1;  // moro está en índice 1
+  final isUnmoroCar = selectedCarIndex == 2;  // unmoro está en índice 2 (nuevo)
+
+  if (orientation == GameOrientation.horizontal) {
+    // Tamaños adaptados para cada carro en modo horizontal
+    if (isMoroCar) {
+      carWidth = 220;
+      carHeight = 100;
+    } else if (isUnmoroCar) {
+       carWidth = 220;  // Ajusta según necesites
+      carHeight = 100;   // Ajusta según necesites
     } else {
-      // Tamaños más grandes para el caballo moro en modo vertical
-      carWidth = isMoroCar ? 160 : 100;
-      carHeight = isMoroCar ? 130 : 60;
-      coinSize = _coinSize;
-      pacaSizeLocal = _pacaSize;
-      snakeSizeLocal = _snakeSize; 
+      carWidth = 140;  // orange_car
+      carHeight = 50;
     }
-
-    _startGasoline();
-    _startObjects();
-    _startMovement();
-
-    // Si el carro seleccionado es el orange_car (índice 0), reproducir sonido de arranque una vez
-    final isOrangeCar = SettingsService.selectedCarIndex == 0;
-    if (isOrangeCar) {
-      try {
-        SfxService.playCarEngine();
-      } catch (_) {}
-    } else if (isMoroCar) {
-      try {
-        SfxService.playHorseNeigh();
-      } catch (_) {}
+    coinSize = 28.0;
+    pacaSizeLocal = 60.0;
+    snakeSizeLocal = 45.0; 
+  } else {
+    // Tamaños adaptados para cada carro en modo vertical
+    if (isMoroCar) {
+      carWidth = 160;
+      carHeight = 130;
+    } else if (isUnmoroCar) {
+      carWidth = 160;  // Ajusta según necesites
+      carHeight = 130;  // Ajusta según necesites
+    } else {
+      carWidth = 100;  // orange_car
+      carHeight = 60;
     }
+    coinSize = _coinSize;
+    pacaSizeLocal = _pacaSize;
+    snakeSizeLocal = _snakeSize; 
   }
+
+  _startGasoline();
+  _startObjects();
+  _startMovement();
+
+  // Reproducir sonidos según el carro seleccionado
+  final isOrangeCar = selectedCarIndex == 0;
+  if (isOrangeCar) {
+  try {
+    SfxService.playCarEngine();
+  } catch (_) {}
+} else if (isMoroCar || isUnmoroCar) {
+  // Ambos (moro y unmoro) usan el mismo sonido de caballo
+  try {
+    SfxService.playHorseNeigh();
+  } catch (_) {}
+}
+}
   
   void _stopGame() {
     moveTimer?.cancel();

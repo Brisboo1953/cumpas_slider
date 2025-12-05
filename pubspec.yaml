@@ -71,13 +71,12 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - .env
-    - assets/cars/orange_car.png
-    - assets/cars/orange_car_h.png
     - assets/cars/
     - assets/escenarios/
     - assets/coin.png
     - assets/paca.png
     - assets/snake.png
+    - assets/profile/
 
     # Sound assets
     - assets/sounds/menu_music.mp3

@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:flutter/services.dart';
 import 'game_page.dart'; 
 import 'options_page_ui.dart';
 import 'services/music_service.dart';
 import 'services/settings_service.dart';
 import 'scoreboard_page.dart';
 import 'widgets/custom_menu_button.dart';
+import 'package:flutter/foundation.dart';
 
 
 void main() async {
@@ -100,7 +101,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
           ),
 
           Align(
-            alignment: const Alignment(0, -0.90),
+            alignment: const Alignment(0, -0.70),
             child: MouseRegion(
               onEnter: (_) => setState(() => _isTitleHovering = true),
               onExit: (_) => setState(() => _isTitleHovering = false),
@@ -120,7 +121,7 @@ class _MainMenuPageState extends State<MainMenuPage> {
                 },
                 child: Image.asset(
                   'assets/images/menu_title.png',
-                  width: MediaQuery.of(context).size.width * 0.6,
+                  width: MediaQuery.of(context).size.width * 0.4,
                   fit: BoxFit.contain,
                 ),
               ),
@@ -282,32 +283,114 @@ class _MainMenuPageState extends State<MainMenuPage> {
     );
   }
 
-  /// Confirmación para salir
+  /// Confirmación para salir 
   void _confirmExit(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text("¿Salir del juego?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text("Cancelar"),
+  showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) {
+      return Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(30),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: const [
+                BoxShadow(
+                  blurRadius: 15,
+                  color: Colors.black87,
+                  offset: Offset(0, 8),
+                )
+              ],
             ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Salir"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-}
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "¿Salir del juego?",
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  kIsWeb 
+                    ? "Volverás al menú principal."
+                    : "Se cerrará la aplicación.",
+                  style: const TextStyle(fontSize: 20, color: Colors.black87),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 30),
 
-// ----------------------------------------------------------
-// PANTALLA DE OPCIONES (placeholder)
-// ----------------------------------------------------------
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 25,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: const Text(
+                        "Cancelar",
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    
+                    ElevatedButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade700,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 25,
+                          vertical: 15,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        kIsWeb ? "Volver" : "Salir",
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  ).then((wantExit) {
+    if (wantExit == true) {
+      if (kIsWeb) {
+        // En web: simplemente cerrar el diálogo y quedarse en el menú
+        Navigator.of(context).pop();
+      } else {
+        // En móvil: cerrar la aplicación
+        Navigator.of(context).pop(); // Cierra el diálogo
+        // Para cerrar la app completamente
+        SystemNavigator.pop();
+      }
+    }
+  });
+}}
 class OptionsPage extends StatelessWidget {
   const OptionsPage({super.key});
 

@@ -270,7 +270,7 @@ class _NewOptionsPageState extends State<NewOptionsPage> with TickerProviderStat
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14), 
-                            backgroundColor: Colors.indigoAccent
+                            backgroundColor: Colors.indigoAccent,foregroundColor: const Color.fromARGB(255, 255, 255, 255)
                           ),
                           onPressed: () {
                             Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
