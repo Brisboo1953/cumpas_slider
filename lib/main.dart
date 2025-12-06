@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
+import 'dart:io' show exit;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/services.dart';
@@ -347,9 +348,11 @@ class _MainMenuPageState extends State<MainMenuPage> {
                   if (_isMusicPlaying) {
                     await MusicService.stop();
                     setState(() => _isMusicPlaying = false);
+                    MusicService.debugState();
                   } else {
                     await MusicService.playMenu();
                     setState(() => _isMusicPlaying = true);
+                    MusicService.debugState();
                   }
                 },
                 child: Image.asset(
@@ -398,115 +401,110 @@ class _MainMenuPageState extends State<MainMenuPage> {
     );
   }
 
-
-/// Confirmación para salir //
- void _confirmExit(BuildContext context) {
-  showDialog<bool>(
-    context: context,
-    barrierDismissible: false,
-    builder: (ctx) {
-      return Center(
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(30),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: const [
-                BoxShadow(
-                  blurRadius: 15,
-                  color: Colors.black87,
-                  offset: Offset(0, 8),
-                )
-              ],
-            ),
-            width: 320,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  "¿Salir del juego?",
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
+  /// Confirmación para salir //
+  void _confirmExit(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(30),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 15,
+                    color: Colors.black87,
+                    offset: Offset(0, 8),
+                  )
+                ],
+              ),
+              width: 320,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "¿Salir del juego?",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  kIsWeb 
-                    ? "Volverás al menú principal."
-                    : "Se cerrará la aplicación.",
-                  style: const TextStyle(fontSize: 20, color: Colors.black87),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 30),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 25,
-                          vertical: 15,
+                  const SizedBox(height: 20),
+                  Text(
+                    kIsWeb 
+                      ? "Volverás al menú principal."
+                      : "Se cerrará la aplicación.",
+                    style: const TextStyle(fontSize: 20, color: Colors.black87),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 30),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 25,
+                            vertical: 15,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        "Cancelar",
-                        style: TextStyle(fontSize: 20),
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    
-                    ElevatedButton(
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade700,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 25,
-                          vertical: 15,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                        child: const Text(
+                          "Cancelar",
+                          style: TextStyle(fontSize: 20),
                         ),
                       ),
-                      child: Text(
-                        kIsWeb ? "Volver" : "Salir",
-                        style: const TextStyle(fontSize: 20),
+                      const SizedBox(width: 20),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 25,
+                            vertical: 15,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          kIsWeb ? "Volver" : "Salir",
+                          style: const TextStyle(fontSize: 20),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-  ).then((wantExit) {
-    if (wantExit == true) {
-      if (kIsWeb) {
-        // En web: simplemente cerrar el diálogo y quedarse en el menú
-        Navigator.of(context).pop();
-      } else {
-        // En móvil: cerrar la aplicación
-        Navigator.of(context).pop(); // Cierra el diálogo
-        // Para cerrar la app completamente
-        SystemNavigator.pop();
+        );
+      },
+    ).then((wantExit) {
+      if (wantExit == true) {
+        if (kIsWeb) {
+          // En web: simplemente cerrar el diálogo y quedarse en el menú
+          Navigator.of(context).pop();
+        } else {
+          // En móvil: cerrar la aplicación completamente
+          exit(0);
+        }
       }
-    }
-  });
-}
+    });
+  }
 }
 
 // PANTALLA DE OPCIONES //

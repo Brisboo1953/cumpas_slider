@@ -1,5 +1,5 @@
-name: slider_app
-description: "A new Flutter project."
+name: cumpas_slider
+description: "Un juego de carreras emocionante."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -75,8 +75,11 @@ flutter:
     - assets/escenarios/
     - assets/coin.png
     - assets/paca.png
+    - assets/gas.png
+    - assets/bache.png
     - assets/snake.png
     - assets/profile/
+    - assets/escenarios/camino.png
 
     # Sound assets
     - assets/sounds/menu_music.mp3
@@ -84,6 +87,8 @@ flutter:
     - assets/sounds/coin_sfx.mp3
     - assets/sounds/snake-hissing.mp3
     - assets/sounds/car-engine.mp3
+    - assets/sounds/car-engineq.mp3
+    - assets/sounds/bache.mp3
     - assets/sounds/horse-neigh.mp3
     - assets/sounds/shaken-bush.mp3
     - assets/ui/buttons/
@@ -91,6 +96,7 @@ flutter:
     # Imagen de fondo del menú principal (añade el archivo en assets/images/)
     - assets/images/menu_start.jpg
     - assets/images/menu_title.png
+    - assets/images/level_up.png
     - assets/ui/buttons/music_normal.png
     - assets/ui/buttons/music_hover.png
     - assets/ui/buttons/music_off.png

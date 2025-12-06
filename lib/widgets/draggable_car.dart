@@ -41,12 +41,10 @@ class _DraggableCarState extends State<DraggableCar> {
         double halfCarWidth = widget.width / 2;
         double halfCarHeight = widget.height / 2;
 
-        // Límites para movimiento horizontal //
-        double leftMarginFactor = 0.05; 
-        double rightMarginFactor = 0.02; 
-
-        double minX = -maxWidth / 2 + halfCarWidth + (maxWidth * leftMarginFactor);
-        double maxX = maxWidth / 2 - halfCarWidth - (maxWidth * rightMarginFactor);
+        // Límites para movimiento horizontal - ahora usa todo el ancho de la pantalla
+        // Solo mantiene el espacio mínimo para que la imagen no se salga de los bordes
+        double minX = -maxWidth / 2 + halfCarWidth;
+        double maxX = maxWidth / 2 - halfCarWidth;
 
         // Límites para movimiento vertical //
         double minY = -maxHeight / 2 + halfCarHeight;

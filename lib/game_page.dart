@@ -1,10 +1,14 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'widgets/draggable_car.dart'; 
+import 'widgets/level_up_animation.dart';
 import 'services/settings_service.dart';
 import 'services/supabase_service.dart';
 import 'services/sfx_service.dart';
+import 'services/music_service.dart';
 
 const double _coinSize = 40.0;
 const double _pacaSize = 80.0; 
@@ -57,64 +61,92 @@ class _GamePageState extends State<GamePage> {
   int currentLevel = 1;
   int nextLevelScore = 300; 
 
+  // Nivel-up overlay state
+  bool _showLevelUp = false;
+  int _lastMilestone = 0; // Último múltiplo de 100 alcanzado
+  
+  // Notifier para forzar rebuild de objetos/fondo sin afectar el carro
+  late ValueNotifier<int> _gameFrameNotifier;
+
   GameOrientation orientation = GameOrientation.vertical;
 
-@override
-void initState() {
-  super.initState();
-  
-  // Obtiene la orientación (Vertical/Horizontal) según preferencias
-  orientation = SettingsService.orientation;
-  
-  // Detectar qué carro está seleccionado
-  final selectedCarIndex = SettingsService.selectedCarIndex;
-  final isOrangeCar = selectedCarIndex == 0;
-  final isMoroCar = selectedCarIndex == 1;
-  final isUnmoroCar = selectedCarIndex == 2;
+  @override
+  void initState() {
+    super.initState();
+    
+    // Inicializar notifier para actualizaciones de frame
+    _gameFrameNotifier = ValueNotifier(0);
+    
+    // Configura la orientación inicial desde preferencias (sin disparar rebuild aquí)
+    _applyOrientation(SettingsService.orientation, notify: false);
 
-  // Configurar tamaños según orientación y tipo de carro
-  if (orientation == GameOrientation.horizontal) {
-    // Tamaños adaptados para cada carro en modo horizontal
-    if (isMoroCar || isUnmoroCar) {
-      carWidth = 220;
-      carHeight = 100;
-    } else {
-      carWidth = 140;  // orange_car
-      carHeight = 50;
+    _startGasoline();
+    _startObjects();
+    _startMovement();
+
+    // Reproducir sonidos según el carro seleccionado
+    final selectedCarIndex = SettingsService.selectedCarIndex;
+    final isOrangeCar = selectedCarIndex == 0;
+    final isMoroCar = selectedCarIndex == 1;
+    final isUnmoroCar = selectedCarIndex == 2;
+
+    if (isOrangeCar) {
+      try {
+        SfxService.playCarEngine();
+      } catch (_) {}
+    } else if (isMoroCar || isUnmoroCar) {
+      // Ambos (moro y unmoro) usan el mismo sonido de caballo
+      try {
+        SfxService.playHorseNeigh();
+      } catch (_) {}
     }
-    coinSize = 28.0;
-    pacaSizeLocal = 60.0;
-    snakeSizeLocal = 45.0; 
-  } else {
-    // Tamaños adaptados para cada carro en modo vertical
-    if (isMoroCar || isUnmoroCar) {
-      carWidth = 160;
-      carHeight = 130;
-    } else {
-      carWidth = 100;  // orange_car
-      carHeight = 60;
-    }
-    coinSize = _coinSize;
-    pacaSizeLocal = _pacaSize;
-    snakeSizeLocal = _snakeSize; 
   }
 
-  _startGasoline();
-  _startObjects();
-  _startMovement();
+  void _applyOrientation(GameOrientation newOrientation, {bool notify = true}) {
+    if (orientation == newOrientation && notify) return;
 
-  // Reproducir sonidos según el carro seleccionado
-  if (isOrangeCar) {
-    try {
-      SfxService.playCarEngine();
-    } catch (_) {}
-  } else if (isMoroCar || isUnmoroCar) {
-    // Ambos (moro y unmoro) usan el mismo sonido de caballo
-    try {
-      SfxService.playHorseNeigh();
-    } catch (_) {}
+    void update() {
+      orientation = newOrientation;
+
+      // Ajustar tamaños según orientación y carro seleccionado
+      final selectedCarIndex = SettingsService.selectedCarIndex;
+      final isMoroCar = selectedCarIndex == 1;
+      final isUnmoroCar = selectedCarIndex == 2;
+
+      if (orientation == GameOrientation.horizontal) {
+        if (isMoroCar || isUnmoroCar) {
+          carWidth = 220;
+          carHeight = 100;
+        } else {
+          carWidth = 140;  // orange_car
+          carHeight = 50;
+        }
+        coinSize = 28.0;
+        pacaSizeLocal = 60.0;
+        snakeSizeLocal = 45.0;
+      } else {
+        if (isMoroCar || isUnmoroCar) {
+          carWidth = 160;
+          carHeight = 130;
+        } else {
+          carWidth = 100;  // orange_car
+          carHeight = 60;
+        }
+        coinSize = _coinSize;
+        pacaSizeLocal = _pacaSize;
+        snakeSizeLocal = _snakeSize;
+      }
+
+      // Guardar preferencia
+      SettingsService.setOrientation(newOrientation);
+    }
+
+    if (notify && mounted) {
+      setState(update);
+    } else {
+      update();
+    }
   }
-}
   
   void _stopGame() {
     moveTimer?.cancel();
@@ -147,14 +179,41 @@ void initState() {
   }
 
   void _updateLevel() {
+    // Verificar si se alcanzó un nuevo múltiplo de 100
+    final currentMilestone = (score ~/ 100) * 100;
+    if (currentMilestone > _lastMilestone && currentMilestone > 0) {
+      _lastMilestone = currentMilestone;
+      _triggerLevelUpOverlay();
+      debugPrint("MILESTONE REACHED! Score: $score (milestone: $currentMilestone)");
+    }
+
+    // Lógica original de nivel
     if (score >= nextLevelScore) {
       setState(() {
         currentLevel++;
-        backgroundSpeed += 2; 
-        nextLevelScore += 500; 
+        // Aumentar velocidad progresivamente: +2 niveles 1-5, +3 niveles 6-10, +4 nivel 11+
+        if (currentLevel <= 5) {
+          backgroundSpeed += 2;
+        } else if (currentLevel <= 10) {
+          backgroundSpeed += 3;
+        } else {
+          backgroundSpeed += 4;
+        }
+        nextLevelScore += 300; 
       });
       debugPrint("LEVEL UP! Level: $currentLevel, Speed: $backgroundSpeed, Next Score: $nextLevelScore");
     }
+  }
+
+  void _triggerLevelUpOverlay() {
+    if (!mounted) return;
+    _showLevelUp = true;
+    // Forzar rebuild en el próximo frame para mostrar animación sin resetear posición del carro
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   // GASOLINA //
@@ -187,8 +246,27 @@ void initState() {
       if (isGameOver) return; 
 
       _spawnCoins(1);
-      if (timer.tick % 3 == 0) _spawnPaca(1);
-      if (timer.tick % 4 == 0) _spawnSnake(1); 
+      
+      // Aumentar frecuencia de pacas/gas según nivel
+      // Nivel 1-2: cada 2 ticks, Nivel 3-5: cada tick, Nivel 6+: cada tick
+      final pacaFrequency = currentLevel <= 2 ? 2 : 1;
+      if (timer.tick % pacaFrequency == 0) _spawnPaca(1);
+      
+      // Aumentar frecuencia y cantidad de obstáculos según nivel
+      // Nivel 1-3: cada 3 ticks (1-2 obstáculos)
+      // Nivel 4-6: cada 2 ticks (2 obstáculos)
+      // Nivel 7-9: cada tick (2-3 obstáculos)
+      // Nivel 10+: cada tick (3-4 obstáculos)
+      if (currentLevel <= 3) {
+        if (timer.tick % 3 == 0) _spawnSnake(currentLevel >= 2 ? 2 : 1);
+      } else if (currentLevel <= 6) {
+        if (timer.tick % 2 == 0) _spawnSnake(2);
+      } else if (currentLevel <= 9) {
+        _spawnSnake(currentLevel >= 8 ? 3 : 2);
+      } else {
+        // Nivel 10+: mucho más difícil
+        _spawnSnake(currentLevel >= 12 ? 4 : 3);
+      }
     });
   }
 
@@ -240,57 +318,59 @@ void initState() {
       final h = MediaQuery.of(context).size.height;
       final w = MediaQuery.of(context).size.width;
 
-      setState(() {
-        backgroundOffset += backgroundSpeed;
-        
-        // Repetición fondo // 
-        if (orientation == GameOrientation.vertical) {
-          if (backgroundOffset >= h * 3) {
-            backgroundOffset -= h * 2;
-          }
-        } else {
-          // Lógica para horizontal //
-          if (backgroundOffset >= w * 3) {
-            backgroundOffset -= w * 2;
-          }
+      // Actualizar estado sin setState() para no resetear la posición del carro
+      backgroundOffset += backgroundSpeed;
+      
+      // Repetición fondo // 
+      if (orientation == GameOrientation.vertical) {
+        if (backgroundOffset >= h * 3) {
+          backgroundOffset -= h * 2;
         }
-
-        // Mueve objetos según orientación //
-        if (orientation == GameOrientation.vertical) {
-          coins = coins
-            .map((c) => Offset(c.dx, c.dy + backgroundSpeed))
-            .where((c) => c.dy < h + 50)
-            .toList();
-
-          pacas = pacas
-            .map((p) => Offset(p.dx, p.dy + backgroundSpeed))
-            .where((p) => p.dy < h + 50)
-            .toList();
-            
-          snakes = snakes 
-            .map((s) => Offset(s.dx, s.dy + backgroundSpeed))
-            .where((s) => s.dy < h + 50)
-            .toList();
-            
-        } else {
-          coins = coins
-            .map((c) => Offset(c.dx - backgroundSpeed, c.dy))
-            .where((c) => c.dx > -50)
-            .toList();
-
-          pacas = pacas
-            .map((p) => Offset(p.dx - backgroundSpeed, p.dy))
-            .where((p) => p.dx > -50)
-            .toList();
-            
-          snakes = snakes 
-            .map((s) => Offset(s.dx - backgroundSpeed, s.dy))
-            .where((s) => s.dx > -50)
-            .toList();
+      } else {
+        // Lógica para horizontal //
+        if (backgroundOffset >= w * 3) {
+          backgroundOffset -= w * 2;
         }
+      }
 
-        _checkCollision(); 
-      });
+      // Mueve objetos según orientación //
+      if (orientation == GameOrientation.vertical) {
+        coins = coins
+          .map((c) => Offset(c.dx, c.dy + backgroundSpeed))
+          .where((c) => c.dy < h + 50)
+          .toList();
+
+        pacas = pacas
+          .map((p) => Offset(p.dx, p.dy + backgroundSpeed))
+          .where((p) => p.dy < h + 50)
+          .toList();
+          
+        snakes = snakes 
+          .map((s) => Offset(s.dx, s.dy + backgroundSpeed))
+          .where((s) => s.dy < h + 50)
+          .toList();
+          
+      } else {
+        coins = coins
+          .map((c) => Offset(c.dx - backgroundSpeed, c.dy))
+          .where((c) => c.dx > -50)
+          .toList();
+
+        pacas = pacas
+          .map((p) => Offset(p.dx - backgroundSpeed, p.dy))
+          .where((p) => p.dx > -50)
+          .toList();
+          
+        snakes = snakes 
+          .map((s) => Offset(s.dx - backgroundSpeed, s.dy))
+          .where((s) => s.dx > -50)
+          .toList();
+      }
+
+      _checkCollision();
+      
+      // Notificar para repintar objetos/fondo sin afectar DraggableCar
+      _gameFrameNotifier.value++;
     });
   }
 
@@ -328,6 +408,7 @@ void initState() {
         
         try {
           SfxService.playCoin();
+          MusicService.ensurePlayingAfterSfx();
         } catch (_) {}
         scoreChanged = true;
         return true;
@@ -342,7 +423,13 @@ void initState() {
         gasoline = min(100, gasoline + 30);
         gasolineChanged = true;
         try {
-          SfxService.playPaca();
+          // Orange car usa sonido de gas, otros usan paca
+          if (SettingsService.selectedCarIndex == 0) {
+            SfxService.playGas();
+          } else {
+            SfxService.playPaca();
+          }
+          MusicService.ensurePlayingAfterSfx();
         } catch (_) {}
         return true;
       }
@@ -356,7 +443,13 @@ void initState() {
         gasoline = max(0, gasoline - _snakeGasolinePenalty);
         gasolineChanged = true;
         try {
-          SfxService.playSnakeHiss();
+          // Orange car usa sonido de bache, otros usan serpiente
+          if (SettingsService.selectedCarIndex == 0) {
+            SfxService.playBache();
+          } else {
+            SfxService.playSnakeHiss();
+          }
+          MusicService.ensurePlayingAfterSfx();
         } catch (_) {}
         return true;
       }
@@ -375,6 +468,7 @@ void initState() {
   @override
   void dispose() {
     _stopGame();
+    _gameFrameNotifier.dispose();
     super.dispose();
   }
   
@@ -627,72 +721,104 @@ void initState() {
 
   @override
   Widget build(BuildContext context) {
+    // Solo en plataformas móviles (Android/iOS), sincronizar con orientación del dispositivo
+    // En desktop (Chrome/Windows), respetar la preferencia del usuario
+    final isMobile = !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+    if (isMobile) {
+      final deviceOrientation = MediaQuery.of(context).orientation;
+      final targetOrientation =
+          deviceOrientation == Orientation.portrait ? GameOrientation.vertical : GameOrientation.horizontal;
+      if (targetOrientation != orientation) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _applyOrientation(targetOrientation);
+          }
+        });
+      }
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Stack(
           children: [
-            // FONDO (USANDO TRES IMÁGENES) 
-            Positioned.fill(
-              child: Builder(builder: (context) {
-                final sceneAsset = SettingsService.availableScenes[SettingsService.selectedSceneIndex];
-                final screenW = MediaQuery.of(context).size.width;
-                final screenH = MediaQuery.of(context).size.height;
-                if (orientation == GameOrientation.vertical) {
-                  // backgroundOffset % screenH asegura que el desplazamiento se sincronice con la altura de la pantalla
-                  final baseY = (backgroundOffset % screenH) - screenH;
-                  return Stack(
-                    children: List.generate(3, (i) {
-                      final top = baseY + i * screenH;
-                      return Positioned(
-                        top: top,
-                        left: 0,
-                        right: 0,
-                        height: screenH,
-                        child: Image.asset(sceneAsset, height: screenH, fit: BoxFit.cover),
-                      );
-                    }),
-                  );
-                } else {
-                  final baseX = -(backgroundOffset % screenW);
-                  return Stack(
-                    children: List.generate(3, (i) {
-                      final left = baseX + i * screenW;
-                      return Positioned(
-                        left: left,
-                        top: 0,
-                        width: screenW,
-                        bottom: 0,
-                        child: RotatedBox(
-                          quarterTurns: 1,
-                          child: SizedBox(
-                            width: screenW,
-                            height: screenH,
-                            child: Image.asset(sceneAsset, fit: BoxFit.cover),
-                          ),
-                        ),
-                      );
-                    }),
-                  );
-                }
-              }),
-            ),
+            // FONDO Y OBJETOS (actualizado independientemente)
+            ValueListenableBuilder<int>(
+              valueListenable: _gameFrameNotifier,
+              builder: (context, frameCount, _) {
+                return Stack(
+                  children: [
+                    // FONDO (USANDO TRES IMÁGENES) 
+                    Positioned.fill(
+                      child: Builder(builder: (context) {
+                        final sceneAsset = SettingsService.availableScenes[SettingsService.selectedSceneIndex];
+                        final screenW = MediaQuery.of(context).size.width;
+                        final screenH = MediaQuery.of(context).size.height;
+                        if (orientation == GameOrientation.vertical) {
+                          // backgroundOffset % screenH asegura que el desplazamiento se sincronice con la altura de la pantalla
+                          final baseY = (backgroundOffset % screenH) - screenH;
+                          return Stack(
+                            children: List.generate(3, (i) {
+                              final top = baseY + i * screenH;
+                              return Positioned(
+                                top: top,
+                                left: 0,
+                                right: 0,
+                                height: screenH,
+                                child: Image.asset(sceneAsset, height: screenH, fit: BoxFit.cover),
+                              );
+                            }),
+                          );
+                        } else {
+                          final baseX = -(backgroundOffset % screenW);
+                          return Stack(
+                            children: List.generate(3, (i) {
+                              final left = baseX + i * screenW;
+                              return Positioned(
+                                left: left,
+                                top: 0,
+                                width: screenW,
+                                bottom: 0,
+                                child: RotatedBox(
+                                  quarterTurns: 1,
+                                  child: SizedBox(
+                                    width: screenW,
+                                    height: screenH,
+                                    child: Image.asset(sceneAsset, fit: BoxFit.cover),
+                                  ),
+                                ),
+                              );
+                            }),
+                          );
+                        }
+                      }),
+                    ),
 
-            // OBJETOS //
-            ...coins.map((c) => Positioned(
-                left: c.dx,
-                top: c.dy,
-                child: Image.asset("assets/coin.png", width: coinSize),
-              )),
-            ...pacas.map((p) => Positioned(
-                left: p.dx,
-                top: p.dy,
-                child: Image.asset("assets/paca.png", width: pacaSizeLocal),
-              )),
-            ...snakes.map((s) => Positioned(
-                left: s.dx,
-                top: s.dy,
-                child: Image.asset("assets/snake.png", width: snakeSizeLocal),
-              )),
+                    // OBJETOS //
+                    ...coins.map((c) => Positioned(
+                        left: c.dx,
+                        top: c.dy,
+                        child: Image.asset("assets/coin.png", width: coinSize),
+                      )),
+                    ...pacas.map((p) => Positioned(
+                        left: p.dx,
+                        top: p.dy,
+                        child: Image.asset(
+                          SettingsService.selectedCarIndex == 0 ? "assets/gas.png" : "assets/paca.png",
+                          width: pacaSizeLocal,
+                        ),
+                      )),
+                    ...snakes.map((s) => Positioned(
+                        left: s.dx,
+                        top: s.dy,
+                        child: Image.asset(
+                          SettingsService.selectedCarIndex == 0 ? "assets/bache.png" : "assets/snake.png",
+                          width: snakeSizeLocal,
+                        ),
+                      )),
+                  ],
+                );
+              },
+            ),
             
 
             // Aparición del carro //
@@ -799,6 +925,22 @@ void initState() {
             
             // GAME OVER DE PAUSA //
             if (isGameOver) _buildGameOverOverlay(),
+            
+            // Level Up Animation
+            if (_showLevelUp)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Center(
+                    child: LevelUpAnimationWidget(
+                      onComplete: () {
+                        if (mounted) {
+                          setState(() => _showLevelUp = false);
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
